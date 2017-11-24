@@ -503,6 +503,9 @@ dependencies = [
 [[package]]
 name = "plexapi-tests"
 version = "0.1.0"
+dependencies = [
+ "plexapi 0.1.0",
+]
 
 [[package]]
 name = "quote"
@@ -584,6 +587,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "samples"
 version = "0.1.0"
+dependencies = [
+ "plexapi 0.1.0",
+]
 
 [[package]]
 name = "schannel"

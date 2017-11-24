@@ -3,4 +3,6 @@ name = "plexapi-tests"
 version = "0.1.0"
 authors = ["Matthias <matthias.seitz@tum.de>"]
 
-[dependencies]
+[dependencies.plexapi]
+path= "../plexapi"
+version = "0.1.0"
