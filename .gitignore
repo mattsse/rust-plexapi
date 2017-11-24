@@ -3,3 +3,4 @@
 **/*.rs.bk
 .env
 .idea/
+rust-plexapi.iml
