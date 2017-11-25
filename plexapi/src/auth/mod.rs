@@ -1,5 +1,5 @@
 pub struct Authentication {
-    pub user_name: String,
-    pub pass_word: String,
+    pub username: String,
+    pub password: String,
     pub token: Option<String>
 }

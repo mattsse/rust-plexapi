@@ -1,10 +1,15 @@
+#[macro_use] extern crate log;
+extern crate env_logger;
+extern crate dotenv;
+
 pub mod client;
 pub mod server;
 pub mod auth;
 pub mod plex;
 
 pub mod prelude {
-    pub use plex::*;
-    pub use client::*;
-    pub use server::*;
+    pub use super::auth::*;
+    pub use super::plex::*;
+    pub use super::client::prelude::*;
+    pub use super::server::*;
 }

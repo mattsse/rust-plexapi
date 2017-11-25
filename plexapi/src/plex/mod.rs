@@ -4,8 +4,8 @@ pub mod playlist;
 pub mod types;
 
 pub mod prelude {
-    pub use account::*;
-    pub use library::*;
-    pub use playlist::*;
-    pub use types::*;
+    pub use super::account::*;
+    pub use super::library::*;
+    pub use super::playlist::*;
+    pub use super::types::*;
 }
