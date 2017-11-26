@@ -1,4 +1,6 @@
 
+pub type PlexToken = String;
+
 pub trait Playable {}
 
 pub trait ContentData {}

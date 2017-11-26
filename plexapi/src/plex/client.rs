@@ -1,15 +1,14 @@
 use std::sync::{Arc, Mutex};
+use super::session::*;
 
-pub mod session;
-
-use self::session::*;
-
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClientConfig {}
 
 impl ClientConfig {
     pub fn new() -> Self { ClientConfig {} }
 }
 
+#[derive(Debug, Clone)]
 pub struct Client {
     config: ClientConfig,
     sessions: Vec<Arc<Mutex<Session>>>
@@ -27,11 +26,8 @@ impl Client {
         where T: Into<SessionInfo> {
         let session_info = session_info.into();
         let session = Arc::new(Mutex::new(Session::new(session_info)));
-        Err(format!(""))
-    }
-}
+        self.sessions.push(session.clone());
+        Ok(session)
 
-pub mod prelude {
-    pub use super::*;
-    pub use super::session::*;
+    }
 }

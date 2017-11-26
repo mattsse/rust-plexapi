@@ -1,23 +1,27 @@
 use std::result::Result;
 use std::borrow::Cow;
-use auth::Authentication;
 use std::sync::{Arc, Mutex};
 
+pub use super::types::*;
+
+// make generic T : Into<PlexToken>
+#[derive(Debug, PartialEq, Clone)]
 pub struct SessionInfo {
-    pub auth: Authentication,
+    pub auth_token: PlexToken,
     // server endpoint url
-    pub url: String,
+    pub url: String
 }
 
 impl SessionInfo {
-    pub fn new(auth: Authentication, url: String) -> Self {
+    pub fn new(auth_token: PlexToken, url: String) -> Self {
         SessionInfo {
-            auth,
+            auth_token,
             url
         }
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct SessionState {}
 
 impl SessionState {
@@ -25,7 +29,7 @@ impl SessionState {
         SessionState {}
     }
 }
-
+#[derive(Debug, Clone)]
 pub struct Session {
     pub session_info: SessionInfo,
     session_state: Arc<Mutex<SessionState>>
