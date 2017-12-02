@@ -1,10 +1,9 @@
-use hyper::header::{Headers, Header};
-use hyper::Method;
-use reqwest::Request;
-
-use std::borrow::Cow;
-use url::{Url, Host};
-use plex::account::Login;
+use hyper::header::Headers;
+use uname::uname;
+use plex::settings::*;
+use futures::Future;
+use self::request::PlexRequest;
+use self::response::PlexResponse;
 
 /// @see https://github.com/Arcanemagus/plex-api/wiki/Plex-Web-API-Overview#request-headers
 
@@ -15,7 +14,7 @@ header! { (XPlexPlatform, "X-Plex-Platform") => [String] }
 header! { (XPlexPlatformVersion, "X-Plex-Platform-Version") => [String] }
 
 /// one or more of [player, controller, server]
-header! { (XPlexProviders, "X-Plex-Provides") => [String] }
+header! { (XPlexProvides, "X-Plex-Provides") => [String] }
 
 ///UUID, serial number, or other number unique per device
 header! { (XPlexClientIdentifier, "X-Plex-Client-Identifier") => [String] }
@@ -41,73 +40,39 @@ header! { (XPlexToken, "X-Plex-Token") => [String] }
 
 use self::routes::*;
 
-pub trait Service {
+pub trait DummyService<'a> {
     type Request;
     type Response;
     type Error;
+    type Future: Future<Item = Self::Response, Error = Self::Error>;
 
-    fn call(&self, req: Self::Request) -> Result<Self::Response, Self::Error>;
+    fn call(&self, req: Self::Request) -> Self::Future;
 }
 
-pub trait PlexRequest<'a> {
-    fn method() -> Method;
-    fn url(&self) -> Url;
+pub trait PlexService<'a, T, S> {
+    type Error;
 
-    fn header(&self) -> Headers;
+    fn submit(&self, req: T) -> Result<S, Self::Error>;
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct SignInRequest<'a> {
-    pub login: &'a Login
+/// Basic Headers for requests to plex
+pub fn basic_plex_headers() -> Headers {
+    let mut headers = Headers::new();
+    // TODO is this completely safe?
+    let info = uname().unwrap();
+    headers.set(XPlexPlatform(info.sysname.clone()));
+    headers.set(XPlexPlatformVersion(info.version.clone()));
+    headers.set(XPlexProduct(PROJECT.to_owned()));
+    headers.set(XPlexVersion(VERSION.to_owned()));
+    headers.set(XPlexDevice(info.sysname.clone()));
+    headers.set(XPlexClientIdentifier(info.nodename.clone()));
+
+    headers
 }
 
-impl<'a> SignInRequest<'a> {
-    pub fn new(login: &'a Login) -> Self {
-        SignInRequest {
-            login
-        }
-    }
-}
 
-/// fn construct_headers() -> Headers {
-   ///     let mut headers = Headers::new();
-   ///     headers.set(UserAgent::new("reqwest"));
-   ///     headers.set(ContentType::png());
-   ///     headers
-   /// }
-
-// TODO create into_plexrequest macro
-
-impl<'a> PlexRequest<'a> for SignInRequest<'a> {
-    fn method() -> Method {
-        Method::Post
-    }
-    fn url(&self) -> Url {
-        // save to unwrap
-        Url::parse(SIGNIN).unwrap()
-    }
-    fn header(&self) -> Headers {
-        let mut headers = Headers::new();
-        headers.set(XPlexToken("".to_owned()));
-        headers
-    }
-}
-
-/// implements Into<Request> for the given type
-macro_rules! to_reqwest {
-    ($req:tt) => {
-    impl<'a> Into<Request> for $req<'a> {
-        fn into(self) -> Request {
-            let mut req = Request::new($req::method(), self.url());
-            *req.headers_mut() = self.header();
-            req
-        }
-    }
-    };
-}
-
-to_reqwest!(SignInRequest);
-
+pub mod request;
+pub mod response;
 
 
 /// Some basic plex routes
@@ -122,4 +87,10 @@ pub mod routes {
     pub const REQUESTS: &'static str = "https://plex.tv/api/invites/requests";// get
     pub const SIGNIN: &'static str = "https://my.plexapp.com/users/sign_in.xml";// get with auth
     pub const WEBHOOKS: &'static str = "https://plex.tv/api/v2/user/webhooks";
+}
+
+pub mod prelude {
+    pub use super::*;
+    pub use super::request::*;
+    pub use super::response::*;
 }

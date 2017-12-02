@@ -1,5 +1,5 @@
 
-use plex::types::{Playable};
+use plex::media::{Playable};
 
 pub trait PlayList1 {
     type Item;

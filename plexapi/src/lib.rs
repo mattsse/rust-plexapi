@@ -4,6 +4,10 @@ extern crate dotenv;
 extern crate reqwest;
 #[macro_use] extern crate hyper;
 extern crate url;
+extern crate uname;
+extern crate tokio_service;
+extern crate tokio_core;
+extern crate futures;
 
 use hyper::header::Headers;
 
