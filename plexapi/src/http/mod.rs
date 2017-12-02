@@ -37,6 +37,18 @@ header! { (XPlexContainerStart, "X-Plex-Container-Start") => [String] }
 /// Authentication token
 header! { (XPlexToken, "X-Plex-Token") => [String] }
 
+pub mod headers {
+    pub use super::{XPlexPlatform,
+                    XPlexPlatformVersion,
+                    XPlexProvides,
+                    XPlexClientIdentifier,
+                    XPlexProduct,
+                    XPlexVersion,
+                    XPlexDevice,
+                    XPlexContainerSize,
+                    XPlexContainerStart,
+                    XPlexToken};
+}
 
 use self::routes::*;
 
@@ -44,15 +56,16 @@ pub trait DummyService<'a> {
     type Request;
     type Response;
     type Error;
-    type Future: Future<Item = Self::Response, Error = Self::Error>;
+    type Future: Future<Item=Self::Response, Error=Self::Error>;
 
     fn call(&self, req: Self::Request) -> Self::Future;
 }
 
-pub trait PlexService<'a, T, S> {
+pub trait PlexService<'a> {
+    type Request: PlexRequest<'a>;
     type Error;
 
-    fn submit(&self, req: T) -> Result<S, Self::Error>;
+    fn submit(&self, req: Self::Request) -> Result<Self::Request, Self::Error>;
 }
 
 /// Basic Headers for requests to plex
@@ -77,20 +90,33 @@ pub mod response;
 
 /// Some basic plex routes
 pub mod routes {
+
     pub const ACCOUNT: &'static str = "https://plex.tv/users/account";
-    pub const FRIENDINVITE: &'static str = "https://plex.tv/api/servers/{machineId}/shared_servers"; // post with data
-    pub const FRIENDSERVERS: &'static str = "https://plex.tv/api/servers/{machineId}/shared_servers/{serverId}";// put with data
-    pub const PLEXSERVERS: &'static str = "https://plex.tv/api/servers/{machineId}";// get
-    pub const FRIENDUPDATE: &'static str = "https://plex.tv/api/friends/{userId}";// put with args, delete
-    pub const REMOVEINVITE: &'static str = "https://plex.tv/api/invites/requested/{userId}?friend=0&server=1&home=0";// delete
-    pub const REQUESTED: &'static str = "https://plex.tv/api/invites/requested";// get
-    pub const REQUESTS: &'static str = "https://plex.tv/api/invites/requests";// get
-    pub const SIGNIN: &'static str = "https://my.plexapp.com/users/sign_in.xml";// get with auth
+
+    pub const FRIENDINVITE: &'static str = "https://plex.tv/api/servers/{machineId}/shared_servers";
+    // post with data
+    pub const FRIENDSERVERS: &'static str = "https://plex.tv/api/servers/{machineId}/shared_servers/{serverId}";
+    // put with data
+    pub const PLEXSERVERS: &'static str = "https://plex.tv/api/servers/{machineId}";
+    // get
+    pub const FRIENDUPDATE: &'static str = "https://plex.tv/api/friends/{userId}";
+    // put with args, delete
+    pub const REMOVEINVITE: &'static str = "https://plex.tv/api/invites/requested/{userId}?friend=0&server=1&home=0";
+    // delete
+    pub const REQUESTED: &'static str = "https://plex.tv/api/invites/requested";
+    // get
+    pub const REQUESTS: &'static str = "https://plex.tv/api/invites/requests";
+    // get
+    pub const SIGNIN: &'static str = "https://my.plexapp.com/users/sign_in.xml";
+    // get with auth
     pub const WEBHOOKS: &'static str = "https://plex.tv/api/v2/user/webhooks";
+
+    pub const DEVICES: &'static str = "https://plex.tv/devices.xml";
 }
 
 pub mod prelude {
     pub use super::*;
+    pub use super::headers::*;
     pub use super::request::*;
     pub use super::response::*;
 }

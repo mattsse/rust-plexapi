@@ -9,6 +9,10 @@ extern crate tokio_service;
 extern crate tokio_core;
 extern crate futures;
 
+#[macro_use] extern crate serde_derive;
+extern crate serde;
+extern crate serde_xml_rs;
+
 use hyper::header::Headers;
 
 pub mod server;

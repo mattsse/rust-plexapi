@@ -1,25 +1,42 @@
 use reqwest::Response;
+use plex::types::{User, MediaContainer,PlexDevice};
+use serde_xml_rs::deserialize;
+use serde_xml_rs::Error;
+use std::io::Read;
+
 pub trait PlexResponse {
     type Data;
     type Error;
 
-    // TODO add reqwest::Response as param
-    fn data(&self) -> Result<Self::Data, Self::Error>;
+    fn from_response(response: Response) -> Result<Self::Data, Self::Error>;
 }
 
-pub struct DummyPlexResponse {}
+pub struct SignInResponse {}
 
-impl PlexResponse for DummyPlexResponse {
-    type Data = ();
+
+impl PlexResponse for SignInResponse {
+    type Data = User;
     type Error = ();
 
-    fn data(&self) -> Result<Self::Data, Self::Error> {
-        Ok(())
+    fn from_response(response: Response) -> Result<Self::Data, Self::Error> {
+        match deserialize(response) {
+            Ok(data) => Ok(data),
+            _ => Err(())
+        }
     }
 }
 
-impl From<Response> for DummyPlexResponse {
-    fn from(_: Response) -> Self {
-        unimplemented!()
+pub struct DeviceResponse {}
+
+impl PlexResponse for DeviceResponse {
+    type Data = Vec<PlexDevice>;
+    type Error = ();
+
+    fn from_response(response: Response) -> Result<Self::Data, Self::Error> {
+        let res: Result<MediaContainer, Error> = deserialize(response);
+        match res {
+            Ok(data) => Ok(data.devices),
+            _ => Err(())
+        }
     }
 }

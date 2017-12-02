@@ -1,18 +1,19 @@
 use hyper::header::{Headers, Authorization, Basic};
 use hyper::Method;
-use reqwest::{Request,Response};
+use reqwest::{Request, Response};
 use tokio_service::{Service, NewService};
 use url::Url;
 use plex::account::Login;
 
-pub use super::routes::*;
-pub use super::{basic_plex_headers};
-
+use super::routes::*;
+use super::basic_plex_headers;
+use super::headers::{XPlexToken};
+use super::response::*;
+use plex::types::{User, PlexToken, PlexDevice};
 
 
 pub trait PlexRequest<'a> {
-
-    type Response : From<Response>;
+    type Response: PlexResponse;
 
     fn method() -> Method;
     fn url(&self) -> Url;
@@ -34,13 +35,12 @@ impl<'a> SignInRequest<'a> {
 }
 
 impl<'a> PlexRequest<'a> for SignInRequest<'a> {
-    type Response = Response;
+    type Response = SignInResponse;
 
     fn method() -> Method {
         Method::Post
     }
     fn url(&self) -> Url {
-        // save to unwrap
         Url::parse(SIGNIN).unwrap()
     }
     fn header(&self) -> Headers {
@@ -53,6 +53,28 @@ impl<'a> PlexRequest<'a> for SignInRequest<'a> {
                 }
             )
         );
+        headers
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ResourcesRequest<'a> {
+    pub token: &'a PlexToken
+}
+
+impl<'a> PlexRequest<'a> for ResourcesRequest<'a> {
+    type Response = SignInResponse;
+
+    fn method() -> Method {
+        Method::Get
+    }
+    fn url(&self) -> Url {
+        Url::parse(DEVICES).unwrap()
+    }
+    fn header(&self) -> Headers {
+        let mut headers = Headers::new();
+        let xtoken: XPlexToken = self.token.into();
+        headers.set(xtoken);
         headers
     }
 }
@@ -71,3 +93,4 @@ macro_rules! to_reqwest {
 }
 
 to_reqwest!(SignInRequest);
+to_reqwest!(ResourcesRequest);
