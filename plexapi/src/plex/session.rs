@@ -1,6 +1,7 @@
 use std::result::Result;
 use std::borrow::Cow;
 use std::sync::{Arc, Mutex};
+use std::rc::Weak;
 use tokio_service::Service;
 
 use reqwest;
@@ -77,7 +78,8 @@ impl Session {
                     _ => Err(())
                 }
             }
-            _ => Err(())
+            _ =>
+                Err(())
         }
     }
 

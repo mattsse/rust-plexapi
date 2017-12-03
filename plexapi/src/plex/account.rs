@@ -1,8 +1,8 @@
 use super::types::*;
 use hyper::header::{Authorization, Basic};
-use std::sync::Arc;
 use super::types::User;
 use super::session::Session;
+use http::request::DevicesRequest;
 
 // TODO remove token attr
 #[derive(Debug, PartialEq, Clone)]
@@ -40,7 +40,7 @@ pub struct PlexAccount<'a> {
     user: User
 }
 
-impl <'a>PlexAccount<'a> {
+impl<'a> PlexAccount<'a> {
     pub fn new(login: Login, session: &'a Session, user: User) -> Self {
         PlexAccount {
             login,
@@ -49,10 +49,12 @@ impl <'a>PlexAccount<'a> {
         }
     }
 
-    pub fn token(&self) -> PlexToken {
-        self.user.authentication_token.clone().into()
+    pub fn token(&self) -> &PlexToken {
+        &self.user.authentication_token
     }
 
-    pub fn sign_in(&mut self) {}
+    pub fn devices(&self) -> Result<Vec<PlexDevice>, ()> {
+        self.session.submit(DevicesRequest::new(self.token()))
+    }
 }
 
