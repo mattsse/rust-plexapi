@@ -67,18 +67,18 @@ impl Session {
 //        unimplemented!()
 //    }
 
-    pub fn submit<'a, T>(&self, req: T) -> Result<<T::Response as PlexResponse>::Data, ()>
-        where T: PlexRequest<'a> + Into<Request> {
-        let request = req.into();
+    pub fn submit< T>(&self, req: T) -> Result<T::Response, ()>
+        where T: PlexRequest  {
+        let request = req.to_request();
         let client = self.session_client.clone();
         match client.execute(request) {
             Ok(res) => {
-                match T::Response::from_response(res) {
+                match req.from_response(res) {
                     Ok(data) => Ok(data),
                     _ => Err(())
                 }
             }
-            _ =>
+            Err(e) =>
                 Err(())
         }
     }

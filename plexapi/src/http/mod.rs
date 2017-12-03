@@ -61,8 +61,8 @@ pub trait DummyService<'a> {
     fn call(&self, req: Self::Request) -> Self::Future;
 }
 
-pub trait PlexService<'a> {
-    type Request: PlexRequest<'a>;
+pub trait PlexService {
+    type Request: PlexRequest;
     type Error;
 
     fn submit(&self, req: Self::Request) -> Result<Self::Request, Self::Error>;
