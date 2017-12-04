@@ -284,8 +284,64 @@ pub trait PlexApplication {}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct PlexServer {}
+pub struct PlexServer {
+    allow_camera_upload:String,
+    allow_channel_access:String,
+    allow_sharing:String,
+    allow_sync:String,
+    background_processing:String,
+    certificate:String,
+    companion_proxy:String,
+    country_code:String,
+    diagnostics:String,
+    event_stream:String,
+    friendly_name:String,
+    hub_search:String,
+    item_clusters:String,
+    machine_identifier:String,
+    media_providers:String,
+    multiuser:String,
+    my_plex:String,
+    my_plex_mapping_state:String,
+    my_plex_signin_state:String,
+    my_plex_subscription:String,
+    my_plex_username:String,
+    owner_features:String,
+    photo_auto_tag:String,
+    platform:String,
+    platform_version:String,
+    plugin_host:String,
+    read_only_libraries:String,
+    request_parameters_in_cookie:String,
+    streaming_brain_abrversion:String,
+    streaming_brain_version:String,
+    sync:String,
+    transcoder_active_video_sessions:String,
+    transcoder_audio:String,
+    transcoder_lyrics:String,
+    transcoder_photo:String,
+    transcoder_subtitles:String,
+    transcoder_video:String,
+    transcoder_video_bitrates:String,
+    transcoder_video_qualities:String,
+    transcoder_video_remux_only:String,
+    transcoder_video_resolutions:String,
+    updated_at:String,
+    updater:String,
+    version:String,
+    voice_search:String,
 
+    #[serde(rename = "Directory", default)]
+    pub directories: Vec<Directory>
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Directory{
+    count: String,
+    key: String,
+    title: String
+}
 
 #[cfg(test)]
 mod tests {
@@ -366,5 +422,10 @@ mod tests {
         </user>"##;
         let user: Result<User, Error> = deserialize(xml.as_bytes());
         assert!(user.is_ok());
+    }
+
+    #[test]
+    fn connect_deserialize(){
+
     }
 }
