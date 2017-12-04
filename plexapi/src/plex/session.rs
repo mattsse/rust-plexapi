@@ -67,24 +67,20 @@ impl Session {
 //        unimplemented!()
 //    }
 
-    pub fn submit< T>(&self, req: T) -> Result<T::Response, ()>
-        where T: PlexRequest  {
+    pub fn submit<T>(&self, req: T) -> Result<T::Response, T::Error>
+        where T: PlexRequest, T::Error : Default {
         let request = req.to_request();
         let client = self.session_client.clone();
         match client.execute(request) {
-            Ok(res) => {
-                match req.from_response(res) {
-                    Ok(data) => Ok(data),
-                    _ => Err(())
-                }
-            }
-            Err(e) =>
-                Err(())
+            Ok(res) =>
+                req.from_response(res),
+            _ =>
+                Err(T::Error::default())
         }
     }
 
     // TODO make this so generic that sign in with token or account is possible
-    pub fn sign_in(&self, login: Login) -> Result<PlexAccount, ()> {
+    pub fn sign_in(&self, login: Login) -> Result<PlexAccount, PlexError> {
         let req = SignInRequest::new(&login);
         let resp: User = self.submit(req).unwrap();
         let account = PlexAccount::new(login.clone(), &self, resp);

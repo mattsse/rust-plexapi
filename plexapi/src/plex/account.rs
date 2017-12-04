@@ -2,7 +2,9 @@ use super::types::*;
 use hyper::header::{Authorization, Basic};
 use super::types::User;
 use super::session::Session;
-use http::request::DevicesRequest;
+use http::request::{PlexError, DevicesRequest};
+
+use std::rc::{Rc, Weak};
 
 // TODO remove token attr
 #[derive(Debug, PartialEq, Clone)]
@@ -53,8 +55,16 @@ impl<'a> PlexAccount<'a> {
         &self.user.authentication_token
     }
 
-    pub fn devices(&self) -> Result<Vec<PlexDevice>, ()> {
-        self.session.submit(DevicesRequest::new(self.token()))
+    pub fn devices(& self) -> Result<Vec<PlexDevice>, PlexError> {
+        match self.session.submit(DevicesRequest::new(self.token())) {
+            Ok(devices) => {
+                let s = devices.into_iter()
+//                    .map(|m|m.clone())
+                    .map(  | m | PlexDevice::new(m, &self))
+                    .collect::<Vec<_>>();
+                Ok(s)
+            }
+            Err(e) => Err(e)
+        }
     }
 }
-

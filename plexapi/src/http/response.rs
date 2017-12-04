@@ -1,5 +1,5 @@
 use reqwest::Response;
-use plex::types::{User, MediaContainer,PlexDevice};
+use plex::types::{User, MediaContainer, Device};
 use serde_xml_rs::deserialize;
 use serde_xml_rs::Error;
 
@@ -28,7 +28,7 @@ impl PlexResponse for SignInResponse {
 pub struct DeviceResponse {}
 
 impl PlexResponse for DeviceResponse {
-    type Data = Vec<PlexDevice>;
+    type Data = Vec<Device>;
     type Error = ();
 
     fn from_response(response: Response) -> Result<Self::Data, Self::Error> {

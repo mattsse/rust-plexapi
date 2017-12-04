@@ -6,8 +6,20 @@ use serde_xml_rs::{deserialize, Error};
 use plex::account::Login;
 use super::routes::*;
 use super::headers::XPlexToken;
-use plex::types::{PlexToken, PlexDevice, User, MediaContainer};
+use plex::types::*;
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum PlexError {
+    ResponseDeserializeError,
+    RequestFailed,
+    UnknownError
+}
+
+impl Default for PlexError {
+    fn default() -> Self {
+        PlexError::UnknownError
+    }
+}
 
 pub trait PlexRequest {
     type Response;
@@ -40,14 +52,10 @@ impl<'a> SignInRequest<'a> {
 
 impl<'a> PlexRequest for SignInRequest<'a> {
     type Response = User;
-    type Error = ();
+    type Error = PlexError;
 
-    fn method() -> Method {
-        Method::Post
-    }
-    fn url(&self) -> Url {
-        Url::parse(SIGNIN).unwrap()
-    }
+    fn method() -> Method { Method::Post }
+    fn url(&self) -> Url { Url::parse(SIGNIN).unwrap() }
     fn header(&self) -> Headers {
         let mut headers = Headers::new();
         headers.set(
@@ -63,7 +71,7 @@ impl<'a> PlexRequest for SignInRequest<'a> {
     fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
         match deserialize(response) {
             Ok(data) => Ok(data),
-            _ => Err(())
+            _ => Err(PlexError::ResponseDeserializeError)
         }
     }
 }
@@ -80,15 +88,11 @@ impl<'a> DevicesRequest<'a> {
 }
 
 impl<'a> PlexRequest for DevicesRequest<'a> {
-    type Response = Vec<PlexDevice>;
-    type Error = ();
+    type Response = Vec<Device>;
+    type Error = PlexError;
 
-    fn method() -> Method {
-        Method::Get
-    }
-    fn url(&self) -> Url {
-        Url::parse(DEVICES).unwrap()
-    }
+    fn method() -> Method { Method::Get }
+    fn url(&self) -> Url { Url::parse(DEVICES).unwrap() }
     fn header(&self) -> Headers {
         let mut headers = Headers::new();
         let xtoken: XPlexToken = self.token.into();
@@ -101,8 +105,40 @@ impl<'a> PlexRequest for DevicesRequest<'a> {
             Ok(data) => Ok(data.devices),
             _ => {
                 println!("desirialize error");
-                Err(())
+                Err(PlexError::ResponseDeserializeError)
             }
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ConnectPlexDeviceRequest<'a> {
+    device: &'a PlexDevice<'a>,
+    connection: &'a Connection
+}
+
+impl<'a> ConnectPlexDeviceRequest<'a> {
+    pub fn new(device: &'a PlexDevice, connection: &'a Connection) -> Self {
+        ConnectPlexDeviceRequest { device, connection }
+    }
+}
+
+impl<'a> PlexRequest for ConnectPlexDeviceRequest<'a> {
+    type Response = Response;
+    type Error = PlexError;
+
+    fn method() -> Method { Method::Get }
+
+    fn url(&self) -> Url { Url::parse(self.connection.endpoint().as_str()).unwrap() }
+
+    fn header(&self) -> Headers {
+        let mut headers = Headers::new();
+        let xtoken: XPlexToken = self.device.account.token().into();
+        headers.set(xtoken);
+        headers
+    }
+
+    fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
+        Ok(response)
     }
 }

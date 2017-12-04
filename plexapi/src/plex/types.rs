@@ -1,5 +1,8 @@
 use http::headers::XPlexToken;
+use http::request::{ConnectPlexDeviceRequest};
 use super::account::PlexAccount;
+
+use reqwest::Response;
 
 // TODO make the serde types data types and wrap them in the actual types to use
 
@@ -123,13 +126,15 @@ pub struct ProfileSettings {
     auto_select_audio: String
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq )]
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PlexDevice {
+pub struct Device {
     pub name: String,
     pub product: String,
     pub product_version: String,
-    pub platform: String, //
+    pub platform: String,
+    //
     pub platform_version: String,
     pub device: String,
     pub client_identifier: String,
@@ -154,20 +159,88 @@ pub struct PlexDevice {
     pub synced: Option<String>,
     pub relay: Option<String>,
     pub screen_resolution: Option<String>,
-    pub screen_density: Option<String>,
+    pub screen_density: Option<String>
+}
 
-//    #[serde(skip_deserializing, skip_serializing)]
-//    pub account: Weak<PlexAccount<'static>>
+impl Device {}
+
+#[derive(Debug)]
+pub struct PlexDevice<'a> {
+    inner: Device,
+    pub account: &'a PlexAccount<'a>
+}
+
+impl<'a> PlexDevice<'a> {
+    pub fn new(inner: Device, account: &'a PlexAccount) -> Self {
+        PlexDevice {
+            inner,
+            account
+        }
+    }
+
+    /// prioritize local connections over remote
+    pub fn connect(&self) -> Response {
+        let con = self.inner.connection.as_ref().unwrap().first().unwrap();
+        let req = ConnectPlexDeviceRequest::new(self, con);
+        self.account.session.submit(req).unwrap()
+
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ConnectionProtocol {
+    Https,
+    Http,
+}
+
+impl ConnectionProtocol {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            &ConnectionProtocol::Https => "https",
+            &ConnectionProtocol::Http => "http"
+        }
+    }
+    pub fn from_str(s: &str) -> Option<ConnectionProtocol> {
+        match s {
+            "https" => Some(ConnectionProtocol::Https),
+            "http" => Some(ConnectionProtocol::Http),
+            _ => None
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Connection {
-    pub protocol: Option<String>,
+    protocol: Option<String>,
     pub address: Option<String>,
     pub port: Option<String>,
     pub uri: String,
-    pub local: Option<String>
+    local: Option<String>
+}
+
+impl Connection {
+    pub fn is_local(&self) -> bool {
+        match self.local {
+            Some(ref s) => "1".eq(s),
+            _ => false
+        }
+    }
+
+    pub fn protocol(&self) -> Option<ConnectionProtocol> {
+        match self.protocol {
+            Some(ref s) => ConnectionProtocol::from_str(s),
+            _ => None
+        }
+    }
+
+    pub fn endpoint(&self) -> String {
+        match self.address {
+            Some(ref s) => format!("{}:{}", s, self.port.as_ref().unwrap()),
+            _ => self.uri.clone()
+        }
+
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -176,44 +249,48 @@ pub struct MediaContainer {
     pub size: Option<String>,
     pub public_address: Option<String>,
     #[serde(rename = "Device", default)]
-    pub devices: Vec<PlexDevice>
+    pub devices: Vec<Device>
 }
 
 pub trait PlexDeviceFilter {
     fn select(&self, name: &str) -> Option<&PlexDevice>;
-    fn select_type(&self, device_type: PlexDeviceType) -> Vec<& PlexDevice>;
-}
+    fn select_type(&self, device_type: PlexDeviceType) -> Vec<&PlexDevice>;
 
-impl PlexDeviceFilter for Vec<PlexDevice> {
-    fn select(&self, name: &str) -> Option<&PlexDevice> {
-        self.iter().find(|p| p.name.eq(name))
-    }
-
-    fn select_type<'a>(&self, device_type: PlexDeviceType) -> Vec<&PlexDevice> {
-        let type_name = device_type.as_str();
-        self.iter()
-            .filter(|p| p.product.eq(type_name))
-            .collect::<Vec<_>>()
+    fn first(&self, device_type: PlexDeviceType) -> Option<&PlexDevice> {
+        match self.select_type(device_type).first() {
+            Some(d) => {
+                Some(d)
+            }
+            _ => None
+        }
     }
 }
 
-impl PlexDeviceFilter for MediaContainer {
+impl<'a> PlexDeviceFilter for Vec<PlexDevice<'a>> {
     fn select(&self, name: &str) -> Option<&PlexDevice> {
-        self.devices.iter().find(|p| p.name.eq(name))
+        self.into_iter().find(|p| p.inner.name.eq(name))
     }
 
     fn select_type(&self, device_type: PlexDeviceType) -> Vec<&PlexDevice> {
         let type_name = device_type.as_str();
-        self.devices.iter()
-            .filter(move |p| p.product.eq(type_name))
+        self.into_iter()
+            .filter(|p| p.inner.product.eq(type_name))
             .collect::<Vec<_>>()
     }
 }
 
+
+pub trait PlexApplication {}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PlexServer {}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_xml_rs::{deserialize,Error};
+    use serde_xml_rs::{deserialize, Error};
 
     #[test]
     fn media_container_deserialize() {
