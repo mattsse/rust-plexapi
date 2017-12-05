@@ -104,7 +104,7 @@ impl<'a> PlexRequest for DevicesRequest<'a> {
         match res {
             Ok(data) => Ok(data.devices),
             _ => {
-                println!("desirialize error");
+                error!("desirialize error");
                 Err(PlexError::ResponseDeserializeError)
             }
         }
@@ -124,7 +124,7 @@ impl<'a> ConnectPlexDeviceRequest<'a> {
 }
 
 impl<'a> PlexRequest for ConnectPlexDeviceRequest<'a> {
-    type Response = Response;
+    type Response = PlexServer;
     type Error = PlexError;
 
     fn method() -> Method { Method::Get }
@@ -139,6 +139,9 @@ impl<'a> PlexRequest for ConnectPlexDeviceRequest<'a> {
     }
 
     fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
-        Ok(response)
+        match deserialize(response) {
+            Ok(data) => Ok(data),
+            _ => Err(PlexError::ResponseDeserializeError)
+        }
     }
 }

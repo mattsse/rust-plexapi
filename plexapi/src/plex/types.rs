@@ -1,29 +1,9 @@
 use http::headers::XPlexToken;
-use http::request::{ConnectPlexDeviceRequest};
+use http::request::ConnectPlexDeviceRequest;
 use super::account::PlexAccount;
 
-use reqwest::Response;
-
-// TODO make the serde types data types and wrap them in the actual types to use
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum PlexDeviceType {
-    PlexMediaServer,
-    PlexMediaPlayer,
-    PlexForiOS,
-    PlexWeb
-}
-
-impl PlexDeviceType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            &PlexDeviceType::PlexMediaServer => "Plex Media Server",
-            &PlexDeviceType::PlexWeb => "Plex Web",
-            &PlexDeviceType::PlexMediaPlayer => "Plex Media Player",
-            &PlexDeviceType::PlexForiOS => "Plex for iOS",
-        }
-    }
-}
+use http::request::PlexError;
+pub use super::server::*;
 
 pub type PlexToken = String;
 
@@ -34,12 +14,33 @@ impl<'a> Into<XPlexToken> for &'a PlexToken {
 }
 
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum PlexDeviceType {
+    PlexMediaServer,
+    PlexMediaPlayer,
+    PlexForiOS,
+    PlexForAndroid,
+    PlexWeb
+}
+
+impl PlexDeviceType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            &PlexDeviceType::PlexMediaServer => "Plex Media Server",
+            &PlexDeviceType::PlexWeb => "Plex Web",
+            &PlexDeviceType::PlexMediaPlayer => "Plex Media Player",
+            &PlexDeviceType::PlexForiOS => "Plex for iOS",
+            &PlexDeviceType::PlexForAndroid => "Plex for Android"
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct User {
     #[serde(skip_deserializing, skip_serializing)]
     pub email: String,
     #[serde(skip_deserializing, skip_serializing)]
-    pub  username: String,
+    pub username: String,
     pub id: String,
     // u32
     pub uuid: String,
@@ -179,11 +180,10 @@ impl<'a> PlexDevice<'a> {
     }
 
     /// prioritize local connections over remote
-    pub fn connect(&self) -> Response {
+    pub fn connect(&self) -> Result<PlexServer, PlexError> {
         let con = self.inner.connection.as_ref().unwrap().first().unwrap();
         let req = ConnectPlexDeviceRequest::new(self, con);
-        self.account.session.submit(req).unwrap()
-
+        self.account.session.submit(req)
     }
 }
 
@@ -239,7 +239,6 @@ impl Connection {
             Some(ref s) => format!("{}:{}", s, self.port.as_ref().unwrap()),
             _ => self.uri.clone()
         }
-
     }
 }
 
@@ -280,68 +279,7 @@ impl<'a> PlexDeviceFilter for Vec<PlexDevice<'a>> {
 }
 
 
-pub trait PlexApplication {}
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct PlexServer {
-    allow_camera_upload:String,
-    allow_channel_access:String,
-    allow_sharing:String,
-    allow_sync:String,
-    background_processing:String,
-    certificate:String,
-    companion_proxy:String,
-    country_code:String,
-    diagnostics:String,
-    event_stream:String,
-    friendly_name:String,
-    hub_search:String,
-    item_clusters:String,
-    machine_identifier:String,
-    media_providers:String,
-    multiuser:String,
-    my_plex:String,
-    my_plex_mapping_state:String,
-    my_plex_signin_state:String,
-    my_plex_subscription:String,
-    my_plex_username:String,
-    owner_features:String,
-    photo_auto_tag:String,
-    platform:String,
-    platform_version:String,
-    plugin_host:String,
-    read_only_libraries:String,
-    request_parameters_in_cookie:String,
-    streaming_brain_abrversion:String,
-    streaming_brain_version:String,
-    sync:String,
-    transcoder_active_video_sessions:String,
-    transcoder_audio:String,
-    transcoder_lyrics:String,
-    transcoder_photo:String,
-    transcoder_subtitles:String,
-    transcoder_video:String,
-    transcoder_video_bitrates:String,
-    transcoder_video_qualities:String,
-    transcoder_video_remux_only:String,
-    transcoder_video_resolutions:String,
-    updated_at:String,
-    updater:String,
-    version:String,
-    voice_search:String,
-
-    #[serde(rename = "Directory", default)]
-    pub directories: Vec<Directory>
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Directory{
-    count: String,
-    key: String,
-    title: String
-}
 
 #[cfg(test)]
 mod tests {
@@ -424,8 +362,5 @@ mod tests {
         assert!(user.is_ok());
     }
 
-    #[test]
-    fn connect_deserialize(){
 
-    }
 }
