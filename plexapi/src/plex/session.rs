@@ -1,13 +1,5 @@
 use std::result::Result;
-use std::borrow::Cow;
 use std::sync::{Arc, Mutex};
-use std::rc::Weak;
-use tokio_service::Service;
-
-use reqwest;
-use futures::{Future, Stream};
-use tokio_core;
-
 use super::types::*;
 use http::*;
 use http::response::*;
@@ -67,18 +59,6 @@ impl Session {
 //        unimplemented!()
 //    }
 
-    pub fn submit<T>(&self, req: T) -> Result<T::Response, T::Error>
-        where T: PlexRequest, T::Error : Default {
-        let request = req.to_request();
-        let client = self.session_client.clone();
-        match client.execute(request) {
-            Ok(res) =>
-                req.from_response(res),
-            _ =>
-                Err(T::Error::default())
-        }
-    }
-
     // TODO make this so generic that sign in with token or account is possible
     pub fn sign_in(&self, login: Login) -> Result<PlexAccount, PlexError> {
         let req = SignInRequest::new(&login);
@@ -89,4 +69,18 @@ impl Session {
 }
 
 
+impl <'a> PlexRequestExecutor for &'a Session {
+
+    fn submit<T>(&self, req: T) -> Result<T::Response, T::Error>
+        where T: PlexRequest, T::Error: Default {
+        let request = req.to_request();
+        let client = self.session_client.clone();
+        match client.execute(request) {
+            Ok(res) =>
+                req.from_response(res),
+            _ =>
+                Err(T::Error::default())
+        }
+    }
+}
 

@@ -7,6 +7,8 @@ use plex::account::Login;
 use super::routes::*;
 use super::headers::XPlexToken;
 use plex::types::*;
+use plex::library::sections::*;
+
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum PlexError {
@@ -35,6 +37,13 @@ pub trait PlexRequest {
         *req.headers_mut() = self.header();
         req
     }
+}
+
+pub trait PlexRequestExecutor {
+
+    fn submit<T>(&self, req: T) -> Result<T::Response, T::Error>
+        where T: PlexRequest, T::Error : Default;
+
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -93,12 +102,8 @@ impl<'a> PlexRequest for DevicesRequest<'a> {
 
     fn method() -> Method { Method::Get }
     fn url(&self) -> Url { Url::parse(DEVICES).unwrap() }
-    fn header(&self) -> Headers {
-        let mut headers = Headers::new();
-        let xtoken: XPlexToken = self.token.into();
-        headers.set(xtoken);
-        headers
-    }
+    fn header(&self) -> Headers { self.token.headers() }
+
     fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
         let res: Result<MediaContainer, Error> = deserialize(response);
         match res {
@@ -124,24 +129,79 @@ impl<'a> ConnectPlexDeviceRequest<'a> {
 }
 
 impl<'a> PlexRequest for ConnectPlexDeviceRequest<'a> {
-    type Response = PlexServer;
+    type Response = PlexServer<'a>;
     type Error = PlexError;
 
     fn method() -> Method { Method::Get }
 
     fn url(&self) -> Url { Url::parse(self.connection.endpoint().as_str()).unwrap() }
 
-    fn header(&self) -> Headers {
-        let mut headers = Headers::new();
-        let xtoken: XPlexToken = self.device.account.token().into();
-        headers.set(xtoken);
-        headers
-    }
+    fn header(&self) -> Headers { self.device.account.token().headers() }
 
     fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
-        match deserialize(response) {
-            Ok(data) => Ok(data),
-            _ => Err(PlexError::ResponseDeserializeError)
+        let res: Result<Server, Error> = deserialize(response);
+        match res {
+            Ok(data) => Ok(PlexServer::new(data, self.device, self.connection)),
+            _ => {
+                error!("desirialize error");
+                Err(PlexError::ResponseDeserializeError)
+            }
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct PlexLibraryRequest<'a> {
+    server: &'a PlexServer<'a>
+}
+
+impl<'a> PlexLibraryRequest<'a> {
+    pub fn new(server: &'a PlexServer<'a>) -> Self { PlexLibraryRequest { server } }
+}
+
+impl<'a> PlexRequest for PlexLibraryRequest<'a> {
+    type Response = PlexLibrary<'a>;
+    type Error = PlexError;
+
+    fn method() -> Method { Method::Get }
+
+    fn url(&self) -> Url {
+        Url::parse(self.server.format_url(PlexLibrary::PATH).as_str()).unwrap()
+    }
+
+    fn header(&self) -> Headers { self.server.token().headers() }
+
+    fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
+        let res: Result<Library, Error> = deserialize(response);
+        match res {
+            Ok(data) => Ok(PlexLibrary::new(data, self.server)),
+            _ => {
+                error!("desirialize error");
+                Err(PlexError::ResponseDeserializeError)
+            }
+        }
+    }
+}
+
+pub struct PlexLibrarySectionsRequest<'a> {
+    server: &'a PlexServer<'a>
+}
+
+impl<'a> PlexLibrarySectionsRequest<'a> {
+    pub fn new(server: &'a PlexServer<'a>) -> Self { PlexLibrarySectionsRequest { server } }
+}
+
+impl<'a> PlexRequest for PlexLibrarySectionsRequest<'a> {
+    type Response = Response;
+    type Error = PlexError;
+
+    fn method() -> Method { Method::Get }
+
+    fn url(&self) -> Url { Url::parse(self.server.format_url(PlexLibrary::SECTIONS).as_str()).unwrap() }
+
+    fn header(&self) -> Headers { self.server.token().headers() }
+
+    fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
+        Ok(response)
     }
 }

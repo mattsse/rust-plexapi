@@ -1,8 +1,55 @@
+use std::io::Read;
+
+use super::types::*;
+use http::request::*;
+
 pub trait PlexApplication {}
+
+#[derive(Debug)]
+pub struct PlexServer<'a> {
+    inner: Server,
+    device: &'a PlexDevice<'a>,
+    connection: &'a Connection
+}
+
+
+impl<'a> PlexServer<'a> {
+    pub fn new(inner: Server, device: &'a PlexDevice<'a>, connection: &'a Connection) -> Self {
+        PlexServer { inner, device, connection }
+    }
+
+    pub fn format_url(&self, param: &str) -> String {
+        let delim = match param.contains("?") {
+            true => "&",
+            _ => "?"
+        };
+        format!("{}{}{}X-Plex-Token={}",
+                self.connection.endpoint(), param, delim, self.device.account.token())
+    }
+
+
+    pub fn library(&self) -> Result<PlexLibrary, PlexError> {
+        let req = PlexLibraryRequest::new(&self);
+        self.submit(req)
+    }
+}
+
+impl<'a> PlexTokenProvider for PlexServer<'a> {
+    fn token(&self) -> &PlexToken {
+        self.device.account.token()
+    }
+}
+
+impl<'a> PlexRequestExecutor for &'a PlexServer<'a> {
+    fn submit<T>(&self, req: T) -> Result<T::Response, T::Error>
+        where T: PlexRequest, T::Error: Default {
+        self.device.account.session.submit(req)
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct PlexServer {
+pub struct Server {
     size: String,
     allow_camera_upload: String,
     allow_channel_access: String,
@@ -55,11 +102,13 @@ pub struct PlexServer {
     pub directories: Vec<Directory>
 }
 
+impl Server {}
+
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
-    count: String,
+    count: Option<String>,
     key: String,
     title: String
 }
@@ -98,7 +147,7 @@ transcoderAudio="1" transcoderLyrics="1" transcoderPhoto="1"
 </MediaContainer>
 "##;
 
-        let server: Result<PlexServer, Error> = deserialize(xml.as_bytes());
+        let server: Result<Server, Error> = deserialize(xml.as_bytes());
         assert!(server.is_ok());
     }
 }

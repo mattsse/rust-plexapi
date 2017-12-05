@@ -2,7 +2,7 @@ use super::types::*;
 use hyper::header::{Authorization, Basic};
 use super::types::User;
 use super::session::Session;
-use http::request::{PlexError, DevicesRequest};
+use http::request::{PlexError, DevicesRequest, PlexRequestExecutor};
 
 use std::rc::{Rc, Weak};
 
@@ -51,20 +51,22 @@ impl<'a> PlexAccount<'a> {
         }
     }
 
-    pub fn token(&self) -> &PlexToken {
-        &self.user.authentication_token
-    }
-
-    pub fn devices(& self) -> Result<Vec<PlexDevice>, PlexError> {
+    pub fn devices(&self) -> Result<Vec<PlexDevice>, PlexError> {
         match self.session.submit(DevicesRequest::new(self.token())) {
             Ok(devices) => {
                 let s = devices.into_iter()
 //                    .map(|m|m.clone())
-                    .map(  | m | PlexDevice::new(m, &self))
+                    .map(|m| PlexDevice::new(m, &self))
                     .collect::<Vec<_>>();
                 Ok(s)
             }
             Err(e) => Err(e)
         }
+    }
+}
+
+impl<'a> PlexTokenProvider for PlexAccount<'a> {
+    fn token(&self) -> &PlexToken {
+        &self.user.authentication_token
     }
 }
