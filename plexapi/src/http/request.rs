@@ -192,7 +192,7 @@ impl<'a> PlexLibrarySectionsRequest<'a> {
 }
 
 impl<'a> PlexRequest for PlexLibrarySectionsRequest<'a> {
-    type Response = Response;
+    type Response = Vec<Section>;
     type Error = PlexError;
 
     fn method() -> Method { Method::Get }
@@ -202,6 +202,13 @@ impl<'a> PlexRequest for PlexLibrarySectionsRequest<'a> {
     fn header(&self) -> Headers { self.server.token().headers() }
 
     fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
-        Ok(response)
+        let res: Result<Sections, Error> = deserialize(response);
+        match res {
+            Ok(data) => Ok(data.sections),
+            _ => {
+                error!("desirialize error");
+                Err(PlexError::ResponseDeserializeError)
+            }
+        }
     }
 }
