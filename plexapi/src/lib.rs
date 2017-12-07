@@ -18,6 +18,8 @@ use hyper::header::Headers;
 pub mod server;
 pub mod plex;
 pub mod http;
+pub mod client;
+//pub mod prelude;
 
 pub mod prelude {
     pub use super::plex::prelude::*;

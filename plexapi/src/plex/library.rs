@@ -24,7 +24,8 @@ impl<'a> PlexLibrary<'a> {
     pub fn section(self, title: &str) -> Option<Section> {
         match self.sections() {
             Ok(s) => {
-                s.into_iter().find(|p| p.title.eq(title))
+                s.into_iter()
+                    .find(|p| p.title.eq(title))
             }
             _ => None
         }
@@ -122,13 +123,16 @@ pub mod sections {
         }
     }
 
-    pub struct PlexSection<'a> {
+    #[derive(Debug, Clone)]
+    pub struct PlexSection {
         inner: Section,
-        library: Arc<Session>
+        session: Arc<Session>
     }
 
-    impl <'a> PlexSection<'a> {
-        pub fn new(inner:Section, library: PlexLibrary){}
+    impl PlexSection {
+        pub fn new(inner: Section, session: Arc<Session>) -> Self {
+            PlexSection { inner, session }
+        }
     }
 
 

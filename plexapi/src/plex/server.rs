@@ -8,7 +8,7 @@ pub trait PlexApplication {}
 #[derive(Debug)]
 pub struct PlexServer<'a> {
     inner: Server,
-    device: &'a PlexDevice<'a>,
+    pub device: &'a PlexDevice<'a>,
     connection: &'a Connection
 }
 

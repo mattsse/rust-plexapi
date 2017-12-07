@@ -69,7 +69,7 @@ impl Session {
 }
 
 
-impl <'a> PlexRequestExecutor for &'a Session {
+impl PlexRequestExecutor for Session {
 
     fn submit<T>(&self, req: T) -> Result<T::Response, T::Error>
         where T: PlexRequest, T::Error: Default {

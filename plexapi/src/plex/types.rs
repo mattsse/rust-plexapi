@@ -192,7 +192,7 @@ pub struct PlexDevice<'a> {
 }
 
 impl<'a> PlexDevice<'a> {
-    pub fn new(inner: Device, account: &'a PlexAccount) -> Self {
+    pub fn new(inner: Device, account: &'a PlexAccount<'a>) -> Self {
         PlexDevice {
             inner,
             account

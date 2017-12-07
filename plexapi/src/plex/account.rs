@@ -42,7 +42,7 @@ pub struct PlexAccount<'a> {
     user: User
 }
 
-impl<'a> PlexAccount<'a> {
+impl <'a> PlexAccount<'a> {
     pub fn new(login: Login, session: &'a Session, user: User) -> Self {
         PlexAccount {
             login,
@@ -65,7 +65,7 @@ impl<'a> PlexAccount<'a> {
     }
 }
 
-impl<'a> PlexTokenProvider for PlexAccount<'a> {
+impl <'a> PlexTokenProvider for PlexAccount<'a> {
     fn token(&self) -> &PlexToken {
         &self.user.authentication_token
     }
