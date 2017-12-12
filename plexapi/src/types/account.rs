@@ -1,17 +1,23 @@
-use super::types::*;
+use plex::types::*;
+use hyper::{Body, Client, Request, Method, Uri};
+use hyper::client::HttpConnector;
 use hyper::header::{Authorization, Basic};
-use super::types::User;
-use super::session::Session;
+use hyper_tls::HttpsConnector;
+use http::set_basic_plex_headers;
+use plex::types::User;
+use plex::session::Session;
 use http::request::{PlexError, DevicesRequest, PlexRequestExecutor};
-
-use std::rc::{Rc, Weak};
+use futures::Future;
+use errors::APIError;
+use client::PlexClient;
+use std::str::FromStr;
+use http::routes::SIGNIN;
 
 // TODO remove token attr
 #[derive(Debug, PartialEq, Clone)]
 pub struct Login {
     pub username: String,
-    pub password: String,
-    pub token: Option<PlexToken>
+    pub password: String
 }
 
 impl Login {
@@ -19,8 +25,22 @@ impl Login {
         Login {
             username: username.to_owned(),
             password: password.to_owned(),
-            token: None
         }
+    }
+    pub fn get_token(&self, client: &Client<HttpsConnector<HttpConnector>, Body>) -> impl Future<Item=PlexToken, Error=APIError> {
+        let url = Uri::from_str(SIGNIN).unwrap();
+        let mut request = Request::new(Method::Post, url);
+        set_basic_plex_headers(request.headers_mut());
+        request.headers_mut().set(
+            Authorization(
+                Basic {
+                    username: self.username.clone(),
+                    password: Some(self.password.clone())
+                }
+            )
+        );
+        let resp = client.request(request);
+        PlexClient::from_xml_response::<User>(resp).map(|u| u.auth_token)
     }
 }
 
@@ -42,7 +62,7 @@ pub struct PlexAccount<'a> {
     user: User
 }
 
-impl <'a> PlexAccount<'a> {
+impl<'a> PlexAccount<'a> {
     pub fn new(login: Login, session: &'a Session, user: User) -> Self {
         PlexAccount {
             login,
@@ -65,7 +85,7 @@ impl <'a> PlexAccount<'a> {
     }
 }
 
-impl <'a> PlexTokenProvider for PlexAccount<'a> {
+impl<'a> PlexTokenProvider for PlexAccount<'a> {
     fn token(&self) -> &PlexToken {
         &self.user.authentication_token
     }

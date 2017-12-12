@@ -1,4 +1,3 @@
-pub mod account;
 pub mod library;
 pub mod playlist;
 pub mod types;
@@ -13,9 +12,13 @@ pub mod settings {
     pub const X_PLEX_CONTAINER_SIZE: i8 = 100;
 }
 
+pub mod account {
+    pub use types::account::*;
+}
+
 
 pub mod prelude {
-    pub use super::account::*;
+    pub use types::account::*;
     pub use super::library::*;
     pub use super::playlist::*;
     pub use super::types::*;

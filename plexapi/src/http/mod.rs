@@ -68,18 +68,21 @@ pub trait PlexService {
     fn submit(&self, req: Self::Request) -> Result<Self::Request, Self::Error>;
 }
 
-/// Basic Headers for requests to plex
-pub fn basic_plex_headers() -> Headers {
-    let mut headers = Headers::new();
-    // TODO is this completely safe?
+pub fn set_basic_plex_headers(headers: &mut Headers) {
     let info = uname().unwrap();
+    // TODO is this completely safe?
     headers.set(XPlexPlatform(info.sysname.clone()));
     headers.set(XPlexPlatformVersion(info.version.clone()));
     headers.set(XPlexProduct(PROJECT.to_owned()));
     headers.set(XPlexVersion(VERSION.to_owned()));
     headers.set(XPlexDevice(info.sysname.clone()));
     headers.set(XPlexClientIdentifier(info.nodename.clone()));
+}
 
+/// Basic Headers for requests to plex
+pub fn basic_plex_headers() -> Headers {
+    let mut headers = Headers::new();
+    set_basic_plex_headers(&mut headers);
     headers
 }
 

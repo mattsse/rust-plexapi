@@ -61,10 +61,11 @@ impl Session {
 
     // TODO make this so generic that sign in with token or account is possible
     pub fn sign_in(&self, login: Login) -> Result<PlexAccount, PlexError> {
-        let req = SignInRequest::new(&login);
-        let resp: User = self.submit(req).unwrap();
-        let account = PlexAccount::new(login.clone(), &self, resp);
-        Ok(account)
+        unimplemented!()
+//        let req = SignInRequest::new(&login);
+//        let resp: User = self.submit(req).unwrap();
+//        let account = PlexAccount::new(login.clone(), &self, resp);
+//        Ok(account)
     }
 }
 
