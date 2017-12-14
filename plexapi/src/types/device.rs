@@ -7,7 +7,7 @@ use types::server::{Server, PlexServer};
 #[derive(Debug)]
 pub struct PlexDevice<'a> {
     inner: Device,
-    client: &'a PlexClient<'a>,
+    client: &'a PlexClient,
 }
 
 impl<'a> PlexDevice<'a> {

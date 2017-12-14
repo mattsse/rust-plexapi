@@ -4,7 +4,7 @@ use types::device::Connection;
 #[derive(Debug)]
 pub struct PlexServer<'a> {
     inner: Server,
-    client: &'a PlexClient<'a>,
+    client: &'a PlexClient,
     connection: &'a Connection,
 }
 

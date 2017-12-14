@@ -27,7 +27,7 @@ impl Login {
             password: password.to_owned(),
         }
     }
-    pub fn get_token(&self, client: &Client<HttpsConnector<HttpConnector>, Body>) -> impl Future<Item=PlexToken, Error=APIError> {
+    pub fn get_token<'a>(&self, client: &'a Client<HttpsConnector<HttpConnector>, Body>) -> impl Future<Item=PlexToken, Error=APIError> {
         let url = Uri::from_str(SIGNIN).unwrap();
         let mut request = Request::new(Method::Post, url);
         set_basic_plex_headers(request.headers_mut());
