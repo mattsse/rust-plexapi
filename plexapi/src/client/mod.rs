@@ -1,33 +1,27 @@
 use hyper::client::{Client, HttpConnector, FutureResponse, Request};
-use hyper::{Body, Headers, Uri, Method};
-use hyper_native_tls::NativeTlsClient;
+use hyper::{Body, Uri, Method};
 use hyper_tls::HttpsConnector;
+use futures::{Future, Stream};
+use serde::Deserialize;
+use serde_xml_rs::deserialize;
+use std::str::FromStr;
 use types::PlexToken;
-use serde_xml_rs::{deserialize, Error};
-use tokio_core::reactor::Handle;
+use types::device::{DeviceContainer, PlexDevice, Device};
 use errors::APIError;
 use http::set_basic_plex_headers;
-use auth::PlexTokenizer;
 use http::headers::*;
-use serde::Deserialize;
-use std::str::FromStr;
-use futures::{Future, Stream};
-use futures::future::FutureResult;
+use http::routes::DEVICES;
 
 #[derive(Debug, Clone)]
-pub struct PlexClient {
-    pub client: Client<HttpsConnector<HttpConnector>, Body>,
-    pub token: PlexToken
+pub struct PlexClient<'a> {
+    pub client: &'a Client<HttpsConnector<HttpConnector>, Body>,
+    pub token: PlexToken,
 }
 
 
-impl PlexClient {
-    pub fn create<T: Future<Item=PlexToken, Error=APIError>>(client: Client<HttpsConnector<HttpConnector>,
-        Body>, to_token: T) -> impl Future<Item=PlexClient, Error=APIError> {
-        to_token.map(|token| Self::new(client, token))
-    }
+impl <'a> PlexClient<'a> {
 
-    pub fn new(client: Client<HttpsConnector<HttpConnector>, Body>, token: PlexToken) -> Self {
+    pub fn new(client: &'a Client<HttpsConnector<HttpConnector>, Body>, token: PlexToken) -> Self {
         PlexClient { client, token }
     }
 
@@ -46,10 +40,17 @@ impl PlexClient {
                 Ok(acc)
             }).and_then(|v| String::from_utf8(v).map_err(|_| ()))
                 .and_then(|s|
-                    deserialize::<_, T>(s.as_bytes()).map_err(|e| ())
+                    deserialize::<_, T>(s.as_bytes()).map_err(|_| ())
                 );
             body
         }).map_err(|_| APIError::ReadError)
+    }
+
+
+    pub fn devices(&'a self) -> impl Future<Item=Vec<PlexDevice<'a>>, Error=APIError> {
+        self.get_xml::<DeviceContainer>(DEVICES).map(move |d|
+            d.devices.into_iter().map(|m| PlexDevice::new(m, self)).collect::<Vec<_>>()
+        )
     }
 }
 

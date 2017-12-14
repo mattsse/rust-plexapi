@@ -1,5 +1,3 @@
-use std::io;
-use std::borrow::Cow;
 use std::sync::{Arc, Mutex};
 
 use plex::prelude::*;

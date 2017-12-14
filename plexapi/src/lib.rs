@@ -1,4 +1,5 @@
 #![feature(conservative_impl_trait)]
+#![warn(dead_code)]
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate dotenv;
@@ -23,7 +24,6 @@ pub mod plex;
 pub mod http;
 pub mod client;
 pub mod types;
-pub mod auth;
 pub mod errors;
 //pub mod prelude;
 pub mod prelude {

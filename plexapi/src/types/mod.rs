@@ -29,3 +29,5 @@ impl<'a> Into<XPlexToken> for &'a PlexToken {
 
 
 pub mod account;
+pub mod device;
+pub mod server;

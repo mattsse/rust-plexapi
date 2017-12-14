@@ -1,5 +1,5 @@
 use reqwest::Response;
-use plex::types::{User, MediaContainer, Device};
+use plex::types::{User, DeviceContainer, Device};
 use serde_xml_rs::deserialize;
 use serde_xml_rs::Error;
 
@@ -32,7 +32,7 @@ impl PlexResponse for DeviceResponse {
     type Error = ();
 
     fn from_response(response: Response) -> Result<Self::Data, Self::Error> {
-        let res: Result<MediaContainer, Error> = deserialize(response);
+        let res: Result<DeviceContainer, Error> = deserialize(response);
         match res {
             Ok(data) => Ok(data.devices),
             _ => {

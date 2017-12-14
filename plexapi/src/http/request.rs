@@ -5,7 +5,6 @@ use url::Url;
 use serde_xml_rs::{deserialize, Error};
 use plex::account::Login;
 use super::routes::*;
-use super::headers::XPlexToken;
 use plex::types::*;
 use plex::library::sections::*;
 
@@ -105,7 +104,7 @@ impl<'a> PlexRequest for DevicesRequest<'a> {
     fn header(&self) -> Headers { self.token.headers() }
 
     fn from_response(&self, response: Response) -> Result<Self::Response, Self::Error> {
-        let res: Result<MediaContainer, Error> = deserialize(response);
+        let res: Result<DeviceContainer, Error> = deserialize(response);
         match res {
             Ok(data) => Ok(data.devices),
             _ => {
