@@ -1,15 +1,16 @@
 use client::PlexClient;
 use types::device::Connection;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct PlexServer<'a> {
     inner: Server,
-    client: &'a PlexClient,
-    connection: &'a Connection,
+    client: Rc<PlexClient<'a>>,
+    connection: Connection,
 }
 
 impl<'a> PlexServer<'a> {
-    pub fn new(inner: Server, client: &'a PlexClient, connection: &'a Connection) -> Self {
+    pub fn new(inner: Server, client: Rc<PlexClient<'a>>, connection: Connection) -> Self {
         PlexServer { inner, client, connection }
     }
 

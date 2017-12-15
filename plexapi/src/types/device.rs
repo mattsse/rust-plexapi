@@ -3,15 +3,17 @@ use futures::{Future, future, Map, MapErr};
 use errors::APIError;
 use serde_xml_rs::Error;
 use types::server::{Server, PlexServer};
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct PlexDevice<'a> {
     inner: Device,
-    client: &'a PlexClient,
+    client: Rc<PlexClient<'a>>,
 }
 
+
 impl<'a> PlexDevice<'a> {
-    pub fn new(inner: Device, client: &'a PlexClient) -> Self {
+    pub fn new(inner: Device, client: Rc<PlexClient<'a>>) -> Self {
         PlexDevice {
             inner,
             client,
@@ -19,7 +21,7 @@ impl<'a> PlexDevice<'a> {
     }
 
     /// Connects to the device's connection, prefers local connections
-    pub fn connect(&'a self) -> impl Future<Item=PlexServer<'a>, Error=APIError> {
+    pub fn connect(&self) -> impl Future<Item=PlexServer<'a>, Error=APIError> {
         let con = match self.inner.connections.len() {
             0 => None,
             1 => self.inner.connections.first(),
@@ -30,7 +32,11 @@ impl<'a> PlexDevice<'a> {
         };
         // boxing necessary to unify return type...
         let res: Box<Future<Item=PlexServer, Error=APIError>> = match con {
-            Some(c) => Box::new(self.client.get_xml::<Server>(c.endpoint().as_str()).map(move |server| PlexServer::new(server, self.client, c))),
+            Some(c) => {
+                let cc = c.clone();
+                let client = Rc::clone(&self.client);
+                Box::new(client.get_xml::<Server>(c.endpoint().as_str()).map( move |server| PlexServer::new(server.clone(), Rc::clone(&client), cc)))
+            }
             _ => Box::new(future::err(APIError::from(Error::Custom("No Connection Present for this Device".to_string()))))
         };
         res

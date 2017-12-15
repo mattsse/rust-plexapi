@@ -6,22 +6,26 @@ use serde::Deserialize;
 use serde_xml_rs::deserialize;
 use std::str::FromStr;
 use types::PlexToken;
-use types::device::{DeviceContainer, PlexDevice, Device};
+use types::device::{DeviceContainer, PlexDevice, Device, Connection};
+use types::server::*;
 use errors::APIError;
 use http::basic_plex_headers;
 use http::headers::*;
 use http::routes::DEVICES;
 use types::account::Login;
+use std::rc::Rc;
+use std::cell::RefCell;
+use serde_xml_rs::Error;
 
 #[derive(Debug, Clone)]
-pub struct PlexClient {
-    pub client: Client<HttpsConnector<HttpConnector>, Body>,
+pub struct PlexClient<'a> {
+    pub client: &'a Client<HttpsConnector<HttpConnector>, Body>,
     pub headers: Headers,
 }
 
 
-impl PlexClient {
-    pub fn new(client: Client<HttpsConnector<HttpConnector>, Body>) -> Self {
+impl<'a> PlexClient<'a> {
+    pub fn new(client: &'a Client<HttpsConnector<HttpConnector>, Body>) -> Self {
         PlexClient { client, headers: basic_plex_headers() }
     }
 
@@ -46,17 +50,19 @@ impl PlexClient {
         }).map_err(|_| APIError::ReadError)
     }
 
-
-    pub fn devices<'a>(&'a self) -> impl Future<Item=Vec<PlexDevice<'a>>, Error=APIError> {
-        self.get_xml::<DeviceContainer>(DEVICES).map(move |d|
-            d.devices.into_iter().map(|m| PlexDevice::new(m, self)).collect::<Vec<_>>()
-        )
+    pub fn fut_1(&self) -> Box<Future<Item=(), Error=APIError>> {
+        Box::new(future::ok(()))
+    }
+    pub fn fut_2(&self) -> Box<Future<Item=(), Error=APIError>> {
+        Box::new(future::ok(()))
     }
 
     #[inline]
     pub fn headers_mut(&mut self) -> &mut Headers { &mut self.headers }
 
-    pub fn login<'a>(&'a mut self, login: Login) -> Box<Future<Item=PlexToken, Error=APIError> + 'a> {
+
+    #[deprecated]
+    pub fn login<'s>(&'a mut self, login: Login) -> Box<Future<Item=PlexToken, Error=APIError> + 'a> {
         Box::new(login.get_token(&self.client).and_then(move |token| {
             let xtoken = XPlexToken(token.clone());
             self.headers_mut().set(xtoken);
@@ -65,4 +71,24 @@ impl PlexClient {
     }
 }
 
+pub struct Plex<'a> {
+    client: Rc<PlexClient<'a>>
+}
 
+impl<'a> Plex<'a> {
+
+//    #[inline]
+//    pub fn headers_mut(&mut self) -> &mut Headers { &mut self.client.headers_mut() }
+
+    pub fn new(c: &'a Client<HttpsConnector<HttpConnector>, Body>) -> Self {
+        let client = Rc::new(PlexClient::new(c));
+        Plex { client }
+    }
+
+    pub fn devices(&self) -> impl Future<Item=Vec<PlexDevice<'a>>, Error=APIError> {
+        let client = Rc::clone(&self.client);
+        client.get_xml::<DeviceContainer>(DEVICES).map(move |d|
+            d.devices.into_iter().map(|m| PlexDevice::new(m, Rc::clone(&client))).collect::<Vec<_>>()
+        )
+    }
+}
