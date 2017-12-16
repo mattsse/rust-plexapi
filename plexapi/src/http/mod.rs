@@ -1,9 +1,6 @@
 use hyper::header::Headers;
 use uname::uname;
-use plex::settings::*;
-use futures::Future;
-use self::request::PlexRequest;
-use self::response::PlexResponse;
+use types::settings::{PROJECT, VERSION};
 
 /// @see https://github.com/Arcanemagus/plex-api/wiki/Plex-Web-API-Overview#request-headers
 
@@ -50,24 +47,6 @@ pub mod headers {
                     XPlexToken};
 }
 
-use self::routes::*;
-
-pub trait DummyService<'a> {
-    type Request;
-    type Response;
-    type Error;
-    type Future: Future<Item=Self::Response, Error=Self::Error>;
-
-    fn call(&self, req: Self::Request) -> Self::Future;
-}
-
-pub trait PlexService {
-    type Request: PlexRequest;
-    type Error;
-
-    fn submit(&self, req: Self::Request) -> Result<Self::Request, Self::Error>;
-}
-
 pub fn set_basic_plex_headers(headers: &mut Headers) {
     let info = uname().unwrap();
     // TODO is this completely safe?
@@ -88,7 +67,6 @@ pub fn basic_plex_headers() -> Headers {
 
 
 pub mod request;
-pub mod response;
 
 
 /// Some basic plex routes
@@ -121,5 +99,4 @@ pub mod prelude {
     pub use super::*;
     pub use super::headers::*;
     pub use super::request::*;
-    pub use super::response::*;
 }

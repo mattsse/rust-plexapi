@@ -1,13 +1,10 @@
-use http::request::*;
-use super::types::*;
-use std::io::Read;
-
+use types::server::{PlexServer, Directory};
 use self::sections::*;
 
 #[derive(Debug)]
 pub struct PlexLibrary<'a> {
     inner: Library,
-    server: &'a PlexServer<'a>
+    server: &'a PlexServer<'a>,
 }
 
 impl<'a> PlexLibrary<'a> {
@@ -16,49 +13,49 @@ impl<'a> PlexLibrary<'a> {
 
     pub fn new(inner: Library, server: &'a PlexServer<'a>) -> Self { PlexLibrary { inner, server } }
 
-    pub fn sections(&self) -> Result<Vec<Section>, PlexError> {
-        let req = PlexLibrarySectionsRequest::new(self.server);
-        self.server.submit(req)
-    }
-
-    pub fn section(self, title: &str) -> Option<Section> {
-        match self.sections() {
-            Ok(s) => {
-                s.into_iter()
-                    .find(|p| p.title.eq(title))
-            }
-            _ => None
-        }
-    }
-
-    pub fn sections_by_type(self, t: SectionType) -> Option<Vec<Section>> {
-        match self.sections() {
-            Ok(s) => {
-                let type_name = t.as_str();
-                Some(s.into_iter()
-                    .filter(|p| p.type_.eq(type_name))
-                    .collect::<Vec<_>>())
-            }
-            _ => None
-        }
-    }
-
-
-    pub fn section_by_id(self, id: &str) -> Option<Section> {
-        match self.sections() {
-            Ok(s) => {
-                s.into_iter().find(|p| p.uuid.eq(id))
-            }
-            _ => None
-        }
-    }
+//    pub fn sections(&self) -> Result<Vec<Section>, PlexError> {
+//        let req = PlexLibrarySectionsRequest::new(self.server);
+//        self.server.submit(req)
+//    }
+//
+//    pub fn section(self, title: &str) -> Option<Section> {
+//        match self.sections() {
+//            Ok(s) => {
+//                s.into_iter()
+//                    .find(|p| p.title.eq(title))
+//            }
+//            _ => None
+//        }
+//    }
+//
+//    pub fn sections_by_type(self, t: SectionType) -> Option<Vec<Section>> {
+//        match self.sections() {
+//            Ok(s) => {
+//                let type_name = t.as_str();
+//                Some(s.into_iter()
+//                    .filter(|p| p.type_.eq(type_name))
+//                    .collect::<Vec<_>>())
+//            }
+//            _ => None
+//        }
+//    }
+//
+//
+//    pub fn section_by_id(self, id: &str) -> Option<Section> {
+//        match self.sections() {
+//            Ok(s) => {
+//                s.into_iter().find(|p| p.uuid.eq(id))
+//            }
+//            _ => None
+//        }
+//    }
 }
 
-impl<'a> PlexTokenProvider for PlexLibrary<'a> {
-    fn token(&self) -> &PlexToken {
-        self.server.token()
-    }
-}
+//impl<'a> PlexTokenProvider for PlexLibrary<'a> {
+//    fn token(&self) -> &PlexToken {
+//        self.server.token()
+//    }
+//}
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -72,14 +69,12 @@ pub struct Library {
     media_tag_version: String,
     title1: String,
     #[serde(rename = "Directory", default)]
-    directories: Vec<Directory>
+    directories: Vec<Directory>,
 }
 
 
 pub mod sections {
     use super::*;
-    use super::super::session::Session;
-    use std::sync::Arc;
 
     pub struct MediaFilter(String);
 
@@ -98,7 +93,7 @@ pub mod sections {
         media_tag_version: String,
         title1: String,
         #[serde(rename = "Directory", default)]
-        pub sections: Vec<Section>
+        pub sections: Vec<Section>,
     }
 
     impl Sections {}
@@ -109,7 +104,7 @@ pub mod sections {
         Movie,
         Photo,
         Music,
-        Show
+        Show,
     }
 
     impl SectionType {
@@ -123,17 +118,17 @@ pub mod sections {
         }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct PlexSection {
-        inner: Section,
-        session: Arc<Session>
-    }
-
-    impl PlexSection {
-        pub fn new(inner: Section, session: Arc<Session>) -> Self {
-            PlexSection { inner, session }
-        }
-    }
+//    #[derive(Debug, Clone)]
+//    pub struct PlexSection {
+//        inner: Section,
+//        session: Arc<Session>
+//    }
+//
+//    impl PlexSection {
+//        pub fn new(inner: Section, session: Arc<Session>) -> Self {
+//            PlexSection { inner, session }
+//        }
+//    }
 
 
     #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -156,14 +151,14 @@ pub mod sections {
         pub  updated_at: String,
         pub  created_at: String,
         #[serde(rename = "Location")]
-        pub location: Location
+        pub location: Location,
     }
 
 
     #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
     pub struct Location {
         id: String,
-        path: String
+        path: String,
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -186,7 +181,7 @@ pub mod sections {
         Studio,
         Resolution,
         Guid,
-        Label
+        Label,
     }
 
     trait SectionFilter {

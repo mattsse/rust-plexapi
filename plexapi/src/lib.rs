@@ -17,16 +17,11 @@ extern crate futures;
 extern crate serde;
 extern crate serde_xml_rs;
 
-use hyper::header::Headers;
 
-pub mod server;
-pub mod plex;
 pub mod http;
 pub mod client;
 pub mod types;
 pub mod errors;
-//pub mod prelude;
+
 pub mod prelude {
-    pub use super::plex::prelude::*;
-    pub use super::server::*;
 }

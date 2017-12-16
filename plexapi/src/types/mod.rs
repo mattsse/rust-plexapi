@@ -1,6 +1,12 @@
 use hyper::Headers;
 use http::headers::XPlexToken;
 
+pub mod settings {
+    pub const PROJECT: &'static str = env!("CARGO_PKG_NAME");
+    pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    pub const X_PLEX_CONTAINER_SIZE: i8 = 100;
+}
+
 pub trait PlexTokenProvider {
     fn token(&self) -> &PlexToken;
 }
@@ -31,3 +37,6 @@ impl<'a> Into<XPlexToken> for &'a PlexToken {
 pub mod account;
 pub mod device;
 pub mod server;
+pub mod library;
+pub mod media;
+pub mod playlist;

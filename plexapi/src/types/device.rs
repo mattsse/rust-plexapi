@@ -128,9 +128,9 @@ pub enum ConnectionProtocol {
 
 impl ConnectionProtocol {
     pub fn as_str(&self) -> &'static str {
-        match self {
-            &ConnectionProtocol::Https => "https",
-            &ConnectionProtocol::Http => "http"
+        match *self {
+            ConnectionProtocol::Https => "https",
+            ConnectionProtocol::Http => "http"
         }
     }
     pub fn from_str(s: &str) -> Option<ConnectionProtocol> {
@@ -138,6 +138,27 @@ impl ConnectionProtocol {
             "https" => Some(ConnectionProtocol::Https),
             "http" => Some(ConnectionProtocol::Http),
             _ => None
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum PlexDeviceType {
+    PlexMediaServer,
+    PlexMediaPlayer,
+    PlexForiOS,
+    PlexForAndroid,
+    PlexWeb
+}
+
+impl PlexDeviceType {
+    pub fn as_str(&self) -> &'static str {
+        match *self {
+            PlexDeviceType::PlexMediaServer => "Plex Media Server",
+            PlexDeviceType::PlexWeb => "Plex Web",
+            PlexDeviceType::PlexMediaPlayer => "Plex Media Player",
+            PlexDeviceType::PlexForiOS => "Plex for iOS",
+            PlexDeviceType::PlexForAndroid => "Plex for Android"
         }
     }
 }
