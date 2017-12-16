@@ -1,33 +1,28 @@
 use client::PlexClient;
+use types::library::{PlexLibrary, Library};
+use futures::Future;
+use errors::APIError;
 use types::device::Connection;
 use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct PlexServer<'a> {
-    inner: Server,
+    pub inner: Server,
     client: Rc<PlexClient<'a>>,
-    connection: Connection,
+    conn: Connection,
 }
 
 impl<'a> PlexServer<'a> {
-    pub fn new(inner: Server, client: Rc<PlexClient<'a>>, connection: Connection) -> Self {
-        PlexServer { inner, client, connection }
+    pub fn new(inner: Server, client: Rc<PlexClient<'a>>, conn: Connection) -> Self {
+        PlexServer { inner, client, conn }
     }
 
-//    pub fn format_url(&self, param: &str) -> String {
-//        let delim = match param.contains("?") {
-//            true => "&",
-//            _ => "?"
-//        };
-//        format!("{}{}{}X-Plex-Token={}",
-//                self.connection.endpoint(), param, delim, self.device.account.token())
-//    }
-//
-//
-//    pub fn library(&self) -> Result<PlexLibrary, PlexError> {
-//        let req = PlexLibraryRequest::new(&self);
-//        self.submit(req)
-//    }
+    pub fn library(&self) -> impl Future<Item=PlexLibrary<'a>, Error=APIError> {
+        let client = Rc::clone(&self.client);
+        let url = self.conn.format_url(PlexLibrary::PATH, self.client.token());
+        let conn = self.conn.clone();
+        client.get_xml::<Library>(url.as_str()).map(move |library| PlexLibrary::new(library, client, conn))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

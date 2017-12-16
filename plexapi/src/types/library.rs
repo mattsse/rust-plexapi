@@ -1,61 +1,63 @@
-use types::server::{PlexServer, Directory};
+use types::server::Directory;
+use client::PlexClient;
+use errors::APIError;
+use types::device::Connection;
 use self::sections::*;
+
+use futures::{Future, future};
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct PlexLibrary<'a> {
     inner: Library,
-    server: &'a PlexServer<'a>,
+    client: Rc<PlexClient<'a>>,
+    conn: Connection,
 }
 
 impl<'a> PlexLibrary<'a> {
     pub const PATH: &'static str = "/library";
     pub const SECTIONS: &'static str = "/library/sections";
 
-    pub fn new(inner: Library, server: &'a PlexServer<'a>) -> Self { PlexLibrary { inner, server } }
+    pub fn new(inner: Library, client: Rc<PlexClient<'a>>, conn: Connection) -> Self { PlexLibrary { inner, client, conn } }
 
-//    pub fn sections(&self) -> Result<Vec<Section>, PlexError> {
-//        let req = PlexLibrarySectionsRequest::new(self.server);
-//        self.server.submit(req)
-//    }
-//
-//    pub fn section(self, title: &str) -> Option<Section> {
-//        match self.sections() {
-//            Ok(s) => {
-//                s.into_iter()
-//                    .find(|p| p.title.eq(title))
-//            }
-//            _ => None
-//        }
-//    }
-//
-//    pub fn sections_by_type(self, t: SectionType) -> Option<Vec<Section>> {
-//        match self.sections() {
-//            Ok(s) => {
-//                let type_name = t.as_str();
-//                Some(s.into_iter()
-//                    .filter(|p| p.type_.eq(type_name))
-//                    .collect::<Vec<_>>())
-//            }
-//            _ => None
-//        }
-//    }
-//
-//
-//    pub fn section_by_id(self, id: &str) -> Option<Section> {
-//        match self.sections() {
-//            Ok(s) => {
-//                s.into_iter().find(|p| p.uuid.eq(id))
-//            }
-//            _ => None
-//        }
-//    }
+    pub fn sections(&self) -> impl Future<Item=Vec<PlexLibSection<'a>>, Error=APIError> {
+        let client = Rc::clone(&self.client);
+        let url = self.conn.format_url(PlexLibrary::SECTIONS, self.client.token());
+        let conn = self.conn.clone();
+        self.client.get_xml::<Sections>(url.as_str()).map(move |container| {
+            container.sections
+                .into_iter()
+                .map(|section| PlexLibSection::new(section, Rc::clone(&client), conn.clone())).collect::<Vec<_>>()
+        })
+    }
+    //
+    pub fn section(self, title: &'a str) -> impl Future<Item=PlexLibSection<'a>, Error=APIError> {
+        self.sections().and_then(move |sections|
+            match sections.into_iter().find(|p| p.inner.title.eq(title)) {
+                Some(s) => future::ok(s),
+                _ => future::err(APIError::ReadError)
+            }
+        )
+    }
+
+    pub fn sections_by_type(self, section_type: SectionType) -> impl Future<Item=Vec<PlexLibSection<'a>>, Error=APIError> {
+        self.sections().map(move |sections| {
+            let type_name = section_type.as_str();
+            sections.into_iter()
+                .filter(|p| p.inner.type_.eq(type_name))
+                .collect::<Vec<_>>()
+        })
+    }
+
+    pub fn section_by_id(self, id: &'a str) -> impl Future<Item=PlexLibSection<'a>, Error=APIError> {
+        self.sections().and_then(move |sections|
+            match sections.into_iter().find(|p| p.inner.uuid.eq(id)) {
+                Some(s) => future::ok(s),
+                _ => future::err(APIError::ReadError)
+            }
+        )
+    }
 }
-
-//impl<'a> PlexTokenProvider for PlexLibrary<'a> {
-//    fn token(&self) -> &PlexToken {
-//        self.server.token()
-//    }
-//}
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -75,6 +77,17 @@ pub struct Library {
 
 pub mod sections {
     use super::*;
+
+    #[derive(Debug)]
+    pub struct PlexLibSection<'a> {
+        pub inner: Section,
+        client: Rc<PlexClient<'a>>,
+        conn: Connection,
+    }
+
+    impl<'a> PlexLibSection<'a> {
+        pub fn new(inner: Section, client: Rc<PlexClient<'a>>, conn: Connection) -> Self { PlexLibSection { inner, client, conn } }
+    }
 
     pub struct MediaFilter(String);
 

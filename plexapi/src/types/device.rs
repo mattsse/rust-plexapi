@@ -1,13 +1,15 @@
 use client::PlexClient;
-use futures::{Future, future, Map, MapErr};
+use futures::{Future, future};
 use errors::APIError;
 use serde_xml_rs::Error;
 use types::server::{Server, PlexServer};
+use types::PlexToken;
 use std::rc::Rc;
+
 
 #[derive(Debug)]
 pub struct PlexDevice<'a> {
-    inner: Device,
+    pub inner: Device,
     client: Rc<PlexClient<'a>>,
 }
 
@@ -35,13 +37,31 @@ impl<'a> PlexDevice<'a> {
             Some(c) => {
                 let cc = c.clone();
                 let client = Rc::clone(&self.client);
-                Box::new(client.get_xml::<Server>(c.endpoint().as_str()).map( move |server| PlexServer::new(server.clone(), Rc::clone(&client), cc)))
+                Box::new(client.get_xml::<Server>(c.endpoint().as_str()).map(move |server| PlexServer::new(server.clone(), Rc::clone(&client), cc)))
             }
             _ => Box::new(future::err(APIError::from(Error::Custom("No Connection Present for this Device".to_string()))))
         };
         res
     }
 }
+
+//pub fn select_device<'a, F: Future<Item=Vec<PlexDevice<'a>>, Error=APIError>>(f: F, name: &'a str) -> impl Future<Item=PlexDevice<'a>, Error=APIError> {
+//    f.and_then(move |dev| {
+//        match dev.into_iter().find(|p| p.inner.name.eq(name)) {
+//            Some(d) => future::ok(d),
+//            _ => future::err(APIError::ReadError)
+//        }
+//    })
+//}
+//
+//pub fn select_device_type<'a, F: Future<Item=Vec<PlexDevice<'a>>>>(f: F, device_type: PlexDeviceType) -> impl Future<Item=Vec<PlexDevice<'a>>, Error=F::Error> {
+//    f.map(move |dev| {
+//        let type_name = device_type.as_str();
+//        dev.into_iter()
+//            .filter(|p| p.inner.product.eq(type_name))
+//            .collect::<Vec<_>>()
+//    })
+//}
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -118,6 +138,16 @@ impl Connection {
             _ => self.uri.clone()
         }
     }
+
+    pub fn format_url(&self, param: &str, token: PlexToken) -> String {
+        let delim = match param.contains("?") {
+            true => "&",
+            _ => "?"
+        };
+        format!("{}{}{}X-Plex-Token={}",
+                self.endpoint(), param, delim, token)
+    }
+
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -148,7 +178,7 @@ pub enum PlexDeviceType {
     PlexMediaPlayer,
     PlexForiOS,
     PlexForAndroid,
-    PlexWeb
+    PlexWeb,
 }
 
 impl PlexDeviceType {

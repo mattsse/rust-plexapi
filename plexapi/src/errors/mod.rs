@@ -6,6 +6,7 @@ use std::fmt::{Display, Result as FmtResult, Formatter};
 
 #[derive(Debug)]
 pub enum APIError {
+
     ReadError,
     HttpError(StatusCode),
     XmlError(serde_xml_rs::Error),
