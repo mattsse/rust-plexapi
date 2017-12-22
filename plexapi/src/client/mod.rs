@@ -5,22 +5,31 @@ use futures::{Future, Stream, future};
 use serde::Deserialize;
 use serde_xml_rs::deserialize;
 use std::str::FromStr;
-use types::PlexToken;
+use types::{PlexToken, PlexTokenProvider};
 use types::device::{DeviceContainer, PlexDevice, PlexDeviceType};
 use http::headers::*;
 use errors::APIError;
 use http::basic_plex_headers;
 use http::routes::DEVICES;
 use std::rc::Rc;
+use regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct PlexClient<'a> {
     pub client: &'a Client<HttpsConnector<HttpConnector>, Body>,
     pub headers: Headers,
-    token: PlexToken
+    token: PlexToken,
 }
 
-
+/// plex does not escape chars:
+/// "   &quot;
+/// '   &apos;
+/// <   &lt;
+/// >   &gt;
+/// &   &amp;
+///
+///
+///
 impl<'a> PlexClient<'a> {
     pub fn new(client: &'a Client<HttpsConnector<HttpConnector>, Body>, token: PlexToken) -> Self {
         let mut headers = basic_plex_headers();
@@ -28,14 +37,27 @@ impl<'a> PlexClient<'a> {
         PlexClient { client, headers, token }
     }
 
-    pub fn token(&self) -> PlexToken { self.token.clone() }
-
     pub fn get_xml<'de, T: Deserialize<'de>>(&self, dest: &str) -> impl Future<Item=T, Error=APIError> {
         let url = Uri::from_str(dest).unwrap();
         let mut request = Request::new(Method::Get, url);
         request.headers_mut().extend(self.headers.iter());
+        self.submit_request(request)
+    }
+
+    pub fn get_xml_container<'de, T: Deserialize<'de>>(&self, dest: &str, start: u32, max: u32) -> impl Future<Item=T, Error=APIError> {
+        let url = Uri::from_str(dest).unwrap();
+        let mut request = Request::new(Method::Get, url);
+        request.headers_mut().extend(self.headers.iter());
+        request.headers_mut().set(XPlexContainerStart(start.to_string()));
+        request.headers_mut().set(XPlexContainerSize(max.to_string()));
         Self::from_xml_response(self.client.request(request))
     }
+
+
+    fn submit_request<'de, T: Deserialize<'de>>(&self, request: Request) -> impl Future<Item=T, Error=APIError> {
+        Self::from_xml_response(self.client.request(request))
+    }
+
 
     pub fn from_xml_response<'de, T: Deserialize<'de>>(fut_response: FutureResponse) -> impl Future<Item=T, Error=APIError> {
         fut_response.map_err(|_| ()).and_then(|res| {
@@ -43,15 +65,52 @@ impl<'a> PlexClient<'a> {
                 acc.extend_from_slice(&chunk);
                 Ok(acc)
             }).and_then(|v| String::from_utf8(v).map_err(|_| ()))
-                .and_then(|s|
-                    deserialize::<_, T>(s.as_bytes()).map_err(|_| ())
+                .and_then(|s| {
+                    // escaped the & char which may break deserialization
+                    let escaped = s.replace("&", "&amp;");
+                    deserialize::<_, T>(escaped.as_bytes()).map_err(|_| ())
+                }
                 );
+            body
+        }).map_err(|_| APIError::ReadError)
+    }
+
+
+    pub fn escape_xml(s: &mut String) {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"&((quot|apos|lt|gt|amp);)?").unwrap();
+        }
+        for m in RE.find_iter(s.clone().as_str()) {
+            println!("{:?}", m);
+            if (m.end() - m.start()) == 1 {
+                s.splice(m.start()..m.end(), "&amp;");
+            }
+        }
+    }
+
+
+    /// for dev purposes to get the response as string
+    pub fn text_response(&self, dest: &str) -> impl Future<Item=String, Error=APIError> {
+        let url = Uri::from_str(dest).unwrap();
+        let mut request = Request::new(Method::Get, url);
+        request.headers_mut().extend(self.headers.iter());
+
+        self.client.request(request).map_err(|_| ()).and_then(|res| {
+            let body = res.body().map_err(|_| ()).fold(vec![], |mut acc, chunk| {
+                acc.extend_from_slice(&chunk);
+                Ok(acc)
+            }).and_then(|v| String::from_utf8(v).map_err(|_| ()));
+
             body
         }).map_err(|_| APIError::ReadError)
     }
 
     #[inline]
     pub fn headers_mut(&mut self) -> &mut Headers { &mut self.headers }
+}
+
+impl<'a> PlexTokenProvider for PlexClient<'a> {
+    fn token(&self) -> PlexToken { self.token.clone() }
 }
 
 #[derive(Debug, Clone)]
@@ -88,5 +147,19 @@ impl<'a> Plex<'a> {
                 .filter(|p| p.inner.product.eq(type_name))
                 .collect::<Vec<_>>()
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn escape_test() {
+        let mut before = r##"<V t="&" v="&amp;"/>"##.to_string();
+
+        PlexClient::escape_xml(&mut before);
+        let after = r##"<V t="&amp;" v="&amp;"/>"##.to_string();
+        assert_eq!(before, after);
     }
 }
