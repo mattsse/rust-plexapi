@@ -44,7 +44,7 @@ impl<'a> PlexClient<'a> {
         self.submit_request(request)
     }
 
-    pub fn get_xml_container<'de, T: Deserialize<'de>>(&self, dest: &str, start: u32, max: u32) -> impl Future<Item=T, Error=APIError> {
+    pub fn get_xml_container<'de, T: Deserialize<'de>>(&self, dest: &str, start: usize, max: usize) -> impl Future<Item=T, Error=APIError> {
         let url = Uri::from_str(dest).unwrap();
         let mut request = Request::new(Method::Get, url);
         request.headers_mut().extend(self.headers.iter());

@@ -3,6 +3,7 @@ use types::library::{PlexLibrary, Library};
 use futures::Future;
 use errors::APIError;
 use types::device::Connection;
+use types::PlexTokenProvider;
 use std::rc::Rc;
 
 #[derive(Debug)]

@@ -4,11 +4,11 @@ use http::headers::XPlexToken;
 pub mod settings {
     pub const PROJECT: &'static str = env!("CARGO_PKG_NAME");
     pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    pub const X_PLEX_CONTAINER_SIZE: i8 = 100;
+    pub const X_PLEX_CONTAINER_SIZE: usize = 100;
 }
 
 pub trait PlexTokenProvider {
-    fn token(&self) -> &PlexToken;
+    fn token(&self) -> PlexToken;
 }
 
 pub type PlexToken = String;
