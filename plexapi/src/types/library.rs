@@ -155,7 +155,8 @@ pub mod sections {
             };
             let url = format!("{}{}/{}/all{}", self.connection().endpoint(), PlexLibrary::SECTIONS, self.key(), query);
 
-            let mut fetch_items = move |mut elements: Vec<Self::Content>| {
+            println!("{}", url);
+            let fetch_items = move |mut elements: Vec<Self::Content>| {
                 self.fetch_container(url.as_str(), elements.len(), container_size).and_then(move |items| {
                     let fetched_size = items.len();
                     elements.extend(items.into_iter());
