@@ -34,3 +34,11 @@ pub struct Actor {
     pub tag: String
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
+#[serde(default)]
+pub struct Similar {
+    pub id: String,
+    pub filter: String,
+    pub tag: String,
+}
+

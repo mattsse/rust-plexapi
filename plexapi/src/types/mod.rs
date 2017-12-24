@@ -40,3 +40,5 @@ pub mod server;
 pub mod library;
 pub mod media;
 pub mod playlist;
+pub mod sections;
+pub mod filter;
