@@ -86,16 +86,20 @@ impl<'a> PlexClient<'a> {
 
     pub fn from_xml_response<'de, T: Deserialize<'de>>(fut_response: FutureResponse) -> impl Future<Item=T, Error=APIError> {
         fut_response.map_err(|_| ()).and_then(|res| {
-            let body = res.body().map_err(|_| ()).fold(vec![], |mut acc, chunk| {
-                acc.extend_from_slice(&chunk);
-                Ok(acc)
-            }).and_then(|v| String::from_utf8(v).map_err(|_| ()))
-                .and_then(|s| {
-                    // escaped the & char which may break deserialization
-                    let escaped = s.replace("&", "&amp;");
-                    deserialize::<_, T>(escaped.as_bytes()).map_err(|_| ())
-                }
-                );
+            let body =
+                res.body()
+                    .map_err(|_| ())
+                    .fold(vec![], |mut acc, chunk| {
+                        acc.extend_from_slice(&chunk);
+                        Ok(acc)
+                    }).and_then(|v| String::from_utf8(v).map_err(|_| ()))
+                    .and_then(|s| {
+                        // escaped the & char which may break deserialization
+                        let escaped = s.replace("&", "&amp;");
+//                        println!("{}", escaped);
+                        deserialize::<_, T>(escaped.as_bytes()).map_err(|_| ())
+                    }
+                    );
             body
         }).map_err(|_| APIError::ReadError)
     }
@@ -185,6 +189,7 @@ impl<'a> Plex<'a> {
             Ok(socket) => {
                 let client = Rc::clone(&self.client);
                 let conn = Connection::from_endoint(socket);
+                println!("{:?}", conn);
                 Box::new(client.get_xml::<Server>(conn.endpoint().as_str())
                     .map(move |server| PlexServer::new(server.clone(), Rc::clone(&client), conn)))
             }

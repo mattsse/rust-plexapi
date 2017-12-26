@@ -146,7 +146,11 @@ impl Connection {
 
     pub fn endpoint(&self) -> String {
         match self.address {
-            Some(ref s) => format!("{}:{}", s, self.port.as_ref().unwrap()),
+            // TODO format with protocol
+            Some(ref s) => format!("{}://{}:{}",
+                                   self.protocol().unwrap_or(ConnectionProtocol::Http).as_str(),
+                                   s,
+                                   self.port.as_ref().unwrap()),
             _ => self.uri.clone()
         }
     }

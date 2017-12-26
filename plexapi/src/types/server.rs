@@ -96,6 +96,38 @@ mod tests {
     use super::*;
     use serde_xml_rs::{deserialize, Error};
 
+    #[test]
+    fn device_connect_deserialize() {
+        let xml = r##"<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="21" allowCameraUpload="0" allowChannelAccess="1"
+allowSharing="1" allowSync="0" backgroundProcessing="1"
+certificate="1" companionProxy="1" countryCode="deu"
+diagnostics="logs,databases" eventStream="1" friendlyName="Cloud"
+hubSearch="1" itemClusters="1"
+machineIdentifier="asdasdasdasdas" mediaProviders="1" multiuser="1"
+myPlex="1" myPlexMappingState="mapped"
+myPlexSigninState="ok" myPlexSubscription="0"
+myPlexUsername="max.muster@mail.org"
+ownerFeatures="Android - PiP,adaptive_bitrate,download_certificates,federated-auth,
+ios-rating-modal,loudness,news,radio" photoAutoTag="1"
+platform="Linux"
+platformVersion="3.2.40 (#4 Fri Jul 31 16:04:18 CST 2015)"
+pluginHost="1" readOnlyLibraries="0"
+requestParametersInCookie="1" streamingBrainABRVersion="1"
+streamingBrainVersion="2" sync="1" transcoderActiveVideoSessions="0"
+transcoderAudio="1" transcoderLyrics="1" transcoderPhoto="1"
+ transcoderSubtitles="1" transcoderVideo="1"
+ transcoderVideoBitrates="64,96,208,320,720,1500,2000,3000,4000,8000,10000,12000,20000"
+ transcoderVideoQualities="0,1,2,3,4,5,6,7,8,9,10,11,12"
+ transcoderVideoRemuxOnly="1"
+ transcoderVideoResolutions="128,128,160,240,320,480,768,720,720,1080,1080,1080,1080"
+ updatedAt="1512345212" updater="1" version="1.7.2.3878-8088811b8" voiceSearch="1">
+</MediaContainer>
+"##;
+
+        let server: Result<Server, Error> = deserialize(xml.as_bytes());
+        assert!(server.is_ok());
+    }
 
     #[test]
     fn device_connect_deserialize() {
