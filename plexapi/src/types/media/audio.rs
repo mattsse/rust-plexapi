@@ -1,6 +1,33 @@
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+use client::PlexClient;
+use types::device::Connection;
+use std::rc::Rc;
+use futures::Future;
+use errors::APIError;
+
+pub trait Audio {}
+
+
+pub struct PlexAlbum<'a> {
+    pub inner: Album,
+    conn: Connection,
+    client: Rc<PlexClient<'a>>,
+}
+
+impl<'a> PlexAlbum<'a> {
+    pub fn new(inner: Album, conn: Connection, client: Rc<PlexClient<'a>>) -> Self { PlexAlbum { inner, conn, client } }
+
+    pub fn tracks(&self) -> impl Future<Item=Vec<Track>, Error=APIError> {
+        let url = format!("{}/{}/children", self.conn.endpoint(), self.inner.key);
+        self.client.get_xml::<TrackContainer>(url.as_str())
+            .map(move |container| container.tracks)
+    }
+
+
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct MusicContainer {
+pub struct AlbumContainer {
     pub size: String,
     pub allow_sync: String,
     pub art: String,
@@ -50,7 +77,7 @@ pub struct Album {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase", default)]
-pub struct AlbumContainer {
+pub struct TrackContainer {
     pub size: String,
     pub allow_sync: String,
     pub art: String,
@@ -138,7 +165,7 @@ mod tests {
     use serde_xml_rs::{deserialize, Error};
 
     #[test]
-    fn audio_container_deserialize() {
+    fn album_container_deserialize() {
         let xml = r##"<MediaContainer size="2" allowSync="0"
         art="/:/resources/artist-fanart.jpg" identifier="com.plexapp.plugins.library"
         mediaTagPrefix="/system/bundle/media/flags/" mediaTagVersion="1513137264" mixedParents="1"
@@ -154,13 +181,13 @@ leafCount="6" addedAt="1514064996" updatedAt="234123412">
 </Directory>
         </MediaContainer>
 "##;
-        let server: Result<MusicContainer, Error> = deserialize(xml.as_bytes());
+        let server: Result<AlbumContainer, Error> = deserialize(xml.as_bytes());
         assert!(server.is_ok());
     }
 
 
     #[test]
-    fn album_container_deserialize() {
+    fn track_container_deserialize() {
         let xml = r##"<MediaContainer size="6" allowSync="1"
         art="/:/resources/artist-fanart.jpg"
         grandparentRatingKey="13" grandparentThumb="/library/metadata/13/thumb/1514065011"
@@ -188,7 +215,7 @@ file="/a.mp3" size="6797425" container="mp3" hasThumbnail="1"/>
 </Track>
         </MediaContainer>
 "##;
-        let server: Result<AlbumContainer, Error> = deserialize(xml.as_bytes());
+        let server: Result<TrackContainer, Error> = deserialize(xml.as_bytes());
         assert!(server.is_ok());
     }
 }

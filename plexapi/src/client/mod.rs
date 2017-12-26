@@ -6,13 +6,38 @@ use serde::Deserialize;
 use serde_xml_rs::deserialize;
 use std::str::FromStr;
 use types::{PlexToken, PlexTokenProvider};
-use types::device::{DeviceContainer, PlexDevice, PlexDeviceType};
+use types::device::{DeviceContainer, PlexDevice, PlexDeviceType, Connection};
+use types::server::{PlexServer, Server};
 use http::headers::*;
 use errors::APIError;
 use http::basic_plex_headers;
 use http::routes::DEVICES;
 use std::rc::Rc;
 use regex::Regex;
+use std::net::SocketAddr;
+
+
+#[macro_export]
+macro_rules! plex_client_wrapper {
+
+    ($name :ident) => {
+        pub struct $name {}
+    };
+    ($name :ident { $($field:ident -> $field_type:ty),*},
+    $inner:ident { $($getter:tt -> $getter_type:ty),* }) => {
+    #[derive(Debug, Clone)]
+    pub struct $name<'a> {
+        client : PlexClient<'a>,
+        $($field : $field_type ),*
+    }
+
+    impl <'a> $name<'a> {
+        $(pub fn $getter(&self) -> &$getter_type {&self.$inner.$getter} )*
+    }
+
+    };
+}
+
 
 #[derive(Debug, Clone)]
 pub struct PlexClient<'a> {
@@ -109,6 +134,12 @@ impl<'a> PlexClient<'a> {
     pub fn headers_mut(&mut self) -> &mut Headers { &mut self.headers }
 }
 
+
+pub trait PlexClientProvider<'a> {
+    fn client(&self) -> &Rc<PlexClient<'a>>;
+}
+
+
 impl<'a> PlexTokenProvider for PlexClient<'a> {
     fn token(&self) -> PlexToken { self.token.clone() }
 }
@@ -147,6 +178,21 @@ impl<'a> Plex<'a> {
                 .filter(|p| p.inner.product.eq(type_name))
                 .collect::<Vec<_>>()
         })
+    }
+
+    pub fn connect(&self, server_url: &str) -> impl Future<Item=PlexServer<'a>, Error=APIError> {
+        match server_url.parse::<SocketAddr>() {
+            Ok(socket) => {
+                let client = Rc::clone(&self.client);
+                let conn = Connection::from_endoint(socket);
+                Box::new(client.get_xml::<Server>(conn.endpoint().as_str())
+                    .map(move |server| PlexServer::new(server.clone(), Rc::clone(&client), conn)))
+            }
+            _ => {
+                Box::new(future::err(APIError::ParseError(format!("Could not parse the server url: {}", server_url))))
+                    as Box<Future<Item=PlexServer, Error=APIError>>
+            }
+        }
     }
 }
 

@@ -26,8 +26,8 @@ impl<'a> PlexServer<'a> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
+#[serde(rename_all = "camelCase", default)]
 pub struct Server {
     size: String,
     allow_camera_upload: String,
@@ -77,15 +77,15 @@ pub struct Server {
     version: String,
     voice_search: String,
 
-    #[serde(rename = "Directory", default)]
+    #[serde(rename = "Directory")]
     pub directories: Vec<Directory>,
 }
 
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
+#[serde(rename_all = "camelCase", default)]
 pub struct Directory {
-    count: Option<String>,
+    count: String,
     key: String,
     title: String,
 }

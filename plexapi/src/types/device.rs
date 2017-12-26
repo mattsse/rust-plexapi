@@ -5,7 +5,7 @@ use serde_xml_rs::Error;
 use types::server::{Server, PlexServer};
 use types::PlexToken;
 use std::rc::Rc;
-
+use std::net::SocketAddr;
 
 #[derive(Debug)]
 pub struct PlexDevice<'a> {
@@ -32,12 +32,14 @@ impl<'a> PlexDevice<'a> {
                 _ => self.inner.connections.first()
             }
         };
+
         // boxing necessary to unify return type...
         let res: Box<Future<Item=PlexServer, Error=APIError>> = match con {
             Some(c) => {
-                let cc = c.clone();
                 let client = Rc::clone(&self.client);
-                Box::new(client.get_xml::<Server>(c.endpoint().as_str()).map(move |server| PlexServer::new(server.clone(), Rc::clone(&client), cc)))
+                let conn = c.clone();
+                Box::new(client.get_xml::<Server>(c.endpoint().as_str())
+                    .map(move |server| PlexServer::new(server.clone(), Rc::clone(&client), conn)))
             }
             _ => Box::new(future::err(APIError::from(Error::Custom("No Connection Present for this Device".to_string()))))
         };
@@ -118,6 +120,16 @@ pub struct Connection {
 }
 
 impl Connection {
+    pub fn new(address: &str, port: &str) -> Self {
+        Connection {
+            protocol: None,
+            address: Some(address.to_string()),
+            port: Some(port.to_string()),
+            uri: format!("{}:{}", address, port),
+            local: None,
+        }
+    }
+
     pub fn is_local(&self) -> bool {
         match self.local {
             Some(ref s) => "1".eq(s),
@@ -148,7 +160,13 @@ impl Connection {
                 self.endpoint(), param, delim, token)
     }
 
+    pub fn from_endoint(socket: SocketAddr) -> Connection {
+        let address = socket.ip().to_string();
+        let port = socket.port().to_string();
+        Connection::new(address.as_str(), port.as_str())
+    }
 }
+
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ConnectionProtocol {
@@ -202,11 +220,20 @@ mod tests {
     fn device_container_1_test() {
         let xml = r##"<?xml version="1.0" encoding="UTF-8"?>
 <MediaContainer size="2">
-  <Device name="Name" product="Plex Media Server" productVersion="1.Version" platform="Linux" platformVersion="1.0.0. Date" device="PC" clientIdentifier="126713identifier" createdAt="12356123" lastSeenAt="123678213" provides="server" owned="1" accessToken="123adjhktoken" publicAddress="12.00.22.00" httpsRequired="0" synced="0" relay="1" publicAddressMatches="0" presence="1">
-    <Connection protocol="https" address="123.132.123.132" port="12332" uri="https://123-123-132-132.cad8z34huadhkasdoih.plex.direct:42366" local="1"/>
+  <Device name="Name" product="Plex Media Server" productVersion="1.Version" platform="Linux"
+  platformVersion="1.0.0. Date" device="PC" clientIdentifier="126713identifier" createdAt="12356123"
+  lastSeenAt="123678213" provides="server" owned="1" accessToken="123adjhktoken"
+  publicAddress="12.00.22.00" httpsRequired="0" synced="0" relay="1" publicAddressMatches="0"
+  presence="1">
+    <Connection protocol="https" address="123.132.123.132" port="12332"
+    uri="https://123-123-132-132.cad8z34huadhkasdoih.plex.direct:42366" local="1"/>
   </Device>
-  <Device name="Plex Web (Chrome)" product="Plex Web" productVersion="1.0.0" platform="Chrome" platformVersion="62.0" device="OSX" clientIdentifier="aduzwdsahidentifier" createdAt="12367843" lastSeenAt="36478413" provides="client,player,pubsub-player" owned="1" publicAddress="195.99.132.27" publicAddressMatches="0" presence="0" accessToken="asdhhudatoken">
-    <Connection protocol="https" address="132.123.132.132" port="12323" uri="https://123-312-123-123.c4123hadhiu2h13hd.plex.direct:12312" local="1"/>
+  <Device name="Plex Web (Chrome)" product="Plex Web" productVersion="1.0.0"
+  platform="Chrome" platformVersion="62.0" device="OSX" clientIdentifier="aduzwdsahidentifier"
+  createdAt="12367843" lastSeenAt="36478413" provides="client,player,pubsub-player" owned="1"
+  publicAddress="195.99.132.27" publicAddressMatches="0" presence="0" accessToken="asdhhudatoken">
+    <Connection protocol="https" address="132.123.132.132" port="12323"
+    uri="https://123-312-123-123.c4123hadhiu2h13hd.plex.direct:12312" local="1"/>
   </Device>
 </MediaContainer>
 "##;
