@@ -2,7 +2,7 @@ use hyper;
 use hyper::StatusCode;
 use serde_xml_rs;
 use std::error::Error;
-use std::fmt::{Display, Result as FmtResult, Formatter};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Debug)]
 pub enum APIError {

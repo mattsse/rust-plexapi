@@ -4,7 +4,7 @@ use errors::APIError;
 use types::device::Connection;
 use types::sections::*;
 use types::{PlexToken, PlexTokenProvider};
-use futures::{Future, future};
+use futures::{future, Future};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -18,50 +18,73 @@ impl<'a> PlexLibrary<'a> {
     pub const PATH: &'static str = "/library";
     pub const SECTIONS: &'static str = "/library/sections";
 
-    pub fn new(inner: Library, client: Rc<PlexClient<'a>>, conn: Connection) -> Self { PlexLibrary { inner, client, conn } }
+    pub fn new(inner: Library, client: Rc<PlexClient<'a>>, conn: Connection) -> Self {
+        PlexLibrary {
+            inner,
+            client,
+            conn,
+        }
+    }
 
-    pub fn sections(&self) -> impl Future<Item=Vec<PlexLibSection<'a>>, Error=APIError> {
+    pub fn sections(&self) -> impl Future<Item = Vec<PlexLibSection<'a>>, Error = APIError> {
         let client = Rc::clone(&self.client);
         let url = format!("{}{}", self.conn.endpoint(), PlexLibrary::SECTIONS);
         let conn = self.conn.clone();
-        self.client.get_xml::<Sections>(url.as_str()).map(move |container| {
-            container.sections
-                .into_iter()
-                .map(|section| PlexLibSection::new(section, Rc::clone(&client), conn.clone())).collect::<Vec<_>>()
-        })
+        self.client
+            .get_xml::<Sections>(url.as_str())
+            .map(move |container| {
+                container
+                    .sections
+                    .into_iter()
+                    .map(|section| PlexLibSection::new(section, Rc::clone(&client), conn.clone()))
+                    .collect::<Vec<_>>()
+            })
     }
     //
-    pub fn section(&self, title: &'a str) -> impl Future<Item=PlexLibSection<'a>, Error=APIError> {
-        self.sections().and_then(move |sections|
+    pub fn section(
+        &self,
+        title: &'a str,
+    ) -> impl Future<Item = PlexLibSection<'a>, Error = APIError> {
+        self.sections().and_then(move |sections| {
             match sections.into_iter().find(|p| p.inner.title.eq(title)) {
                 Some(s) => future::ok(s),
-                _ => future::err(APIError::ReadError)
+                _ => future::err(APIError::ReadError),
             }
-        )
+        })
     }
 
-    fn sections_by_type(&self, section_type: SectionType) -> impl Future<Item=Vec<PlexLibSection<'a>>, Error=APIError> {
+    fn sections_by_type(
+        &self,
+        section_type: SectionType,
+    ) -> impl Future<Item = Vec<PlexLibSection<'a>>, Error = APIError> {
         self.sections().map(move |sections| {
             let type_name = section_type.as_str();
-            sections.into_iter()
+            sections
+                .into_iter()
                 .filter(|p| p.inner.type_.eq(type_name))
                 .collect::<Vec<_>>()
         })
     }
 
-    pub fn section_by_id(&self, id: &'a str) -> impl Future<Item=PlexLibSection<'a>, Error=APIError> {
-        self.sections().and_then(move |sections|
+    pub fn section_by_id(
+        &self,
+        id: &'a str,
+    ) -> impl Future<Item = PlexLibSection<'a>, Error = APIError> {
+        self.sections().and_then(move |sections| {
             match sections.into_iter().find(|p| p.inner.uuid.eq(id)) {
                 Some(s) => future::ok(s),
-                _ => future::err(APIError::ReadError)
-            })
+                _ => future::err(APIError::ReadError),
+            }
+        })
     }
 
-    pub fn movie_sections(&self) -> impl Future<Item=Vec<MovieSection<'a>>, Error=APIError> {
-        self.sections_by_type(SectionType::Movie)
-            .map(|sections| sections.into_iter()
+    pub fn movie_sections(&self) -> impl Future<Item = Vec<MovieSection<'a>>, Error = APIError> {
+        self.sections_by_type(SectionType::Movie).map(|sections| {
+            sections
+                .into_iter()
                 .map(|s| MovieSection::from(s))
-                .collect::<Vec<_>>())
+                .collect::<Vec<_>>()
+        })
     }
 }
 
@@ -80,9 +103,6 @@ pub struct Library {
     #[serde(rename = "Directory", default)]
     directories: Vec<Directory>,
 }
-
-
-
 
 #[cfg(test)]
 mod test {

@@ -2,7 +2,7 @@
 pub enum PlexError {
     ResponseDeserializeError,
     RequestFailed,
-    UnknownError
+    UnknownError,
 }
 
 impl Default for PlexError {

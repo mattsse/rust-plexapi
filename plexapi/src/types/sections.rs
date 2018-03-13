@@ -10,7 +10,7 @@ use errors::APIError;
 use futures::Future;
 use std::ops::FnMut;
 use std::cmp::min;
-use futures::future::{Loop, loop_fn};
+use futures::future::{loop_fn, Loop};
 use std::rc::Rc;
 use log::LogLevel;
 
@@ -29,11 +29,19 @@ pub struct PlexLibSection<'a> {
 }
 
 impl<'a> PlexClientProvider<'a> for PlexLibSection<'a> {
-    fn client(&self) -> &Rc<PlexClient<'a>> { &self.client }
+    fn client(&self) -> &Rc<PlexClient<'a>> {
+        &self.client
+    }
 }
 
 impl<'a> PlexLibSection<'a> {
-    pub fn new(inner: Section, client: Rc<PlexClient<'a>>, conn: Connection) -> Self { PlexLibSection { inner, client, conn } }
+    pub fn new(inner: Section, client: Rc<PlexClient<'a>>, conn: Connection) -> Self {
+        PlexLibSection {
+            inner,
+            client,
+            conn,
+        }
+    }
 
     fn format_path(&self, part: &str) -> String {
         let path = format!("{}{}", self.inner.path(), part);
@@ -45,13 +53,19 @@ impl<'a> PlexLibSection<'a> {
     }
 
     pub fn into<T>(self) -> Option<T>
-        where T: From<PlexLibSection<'a>> + LibrarySection<'a> {
+    where
+        T: From<PlexLibSection<'a>> + LibrarySection<'a>,
+    {
         let section = self.inner.section_type()?;
         if section == T::section_type() {
             return Some(T::from(self));
         }
-        log!(LogLevel::Error, "Type Mismatch for Library section, expected {:?}, got {:?}",
-             section, T::section_type());
+        log!(
+            LogLevel::Error,
+            "Type Mismatch for Library section, expected {:?}, got {:?}",
+            section,
+            T::section_type()
+        );
         None
     }
 }
@@ -84,70 +98,101 @@ pub trait LibrarySection<'a>: Clone + Sized + PlexClientProvider<'a> {
     type Error: 'static;
     type Filter: LibraryFilter;
 
-
-    fn get<F>(&self, filter: F) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a>
-        where F: 'a + FnMut(&Self::Content) -> bool {
-        Box::new(self.all()
-            .map(|content|
-                content.into_iter()
-                    .filter(filter)
-                    .collect::<Vec<_>>()))
+    fn get<F>(&self, filter: F) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a>
+    where
+        F: 'a + FnMut(&Self::Content) -> bool,
+    {
+        Box::new(
+            self.all()
+                .map(|content| content.into_iter().filter(filter).collect::<Vec<_>>()),
+        )
     }
 
-    fn all(&self) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a> {
-        let url = format!("{}{}/{}/all", self.connection().endpoint(), PlexLibrary::SECTIONS, self.key());
+    fn all(&self) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a> {
+        let url = format!(
+            "{}{}/{}/all",
+            self.connection().endpoint(),
+            PlexLibrary::SECTIONS,
+            self.key()
+        );
         self.fetch(url.as_str())
     }
 
     /// Returns a list of media items on deck from this library section.
-    fn on_deck(&self) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a> {
-        let url = format!("{}{}/{}/onDeck", self.connection().endpoint(), PlexLibrary::SECTIONS, self.key());
+    fn on_deck(&self) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a> {
+        let url = format!(
+            "{}{}/{}/onDeck",
+            self.connection().endpoint(),
+            PlexLibrary::SECTIONS,
+            self.key()
+        );
         self.fetch(url.as_str())
     }
 
     // -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error>>
     fn search(&'a self, filter: Vec<Self::Filter>, max_results: Option<usize>) {
-        let container_size = min(max_results.unwrap_or(X_PLEX_CONTAINER_SIZE), X_PLEX_CONTAINER_SIZE);
+        let container_size = min(
+            max_results.unwrap_or(X_PLEX_CONTAINER_SIZE),
+            X_PLEX_CONTAINER_SIZE,
+        );
         let query = match filter.is_empty() {
-            false => format!("?{}", filter.iter().map(|f| f.format()).filter(|p| !p.is_empty()).collect::<Vec<_>>().join("&")),
-            _ => "".to_string()
+            false => format!(
+                "?{}",
+                filter
+                    .iter()
+                    .map(|f| f.format())
+                    .filter(|p| !p.is_empty())
+                    .collect::<Vec<_>>()
+                    .join("&")
+            ),
+            _ => "".to_string(),
         };
-        let url = format!("{}{}/{}/all{}", self.connection().endpoint(), PlexLibrary::SECTIONS, self.key(), query);
+        let url = format!(
+            "{}{}/{}/all{}",
+            self.connection().endpoint(),
+            PlexLibrary::SECTIONS,
+            self.key(),
+            query
+        );
 
         println!("{}", url);
-//
-//        let x: Box<Future<Item=Vec<Self::Content>, Error=Self::Error>> =
-//            Box::new(loop_fn((self.clone(), Vec::new()),
-//                             |(s, elements)| {
-//                                 if elements.is_empty() {
-//                                     return Ok(Loop::Break(elements));
-//                                 } else {
-//                                     s.clone().fetch_container("", elements.len(), 200usize).and_then(|items| {
-//                                         Ok(())
-//                                     });
-//                                 }
-//                                 Ok(Loop::Continue((s, elements)))
-//                             }));
-//        x
+        //
+        // let x: Box<Future<Item=Vec<Self::Content>, Error=Self::Error>> =
+        //     Box::new(loop_fn((self.clone(), Vec::new()),
+        //                     |(s, elements)| {
+        //                         if elements.is_empty() {
+        //                             return Ok(Loop::Break(elements));
+        //                         } else {
+        //                             s.clone()
+        // .fetch_container("", elements.len(), 200usize).and_then(|items| {
+        //                                 Ok(())
+        //                             });
+        //                         }
+        //                         Ok(Loop::Continue((s, elements)))
+        //                     }));
+        // x
     }
 
     /// need to be implemented in order to support custom deserialization
-    fn fetch(&self, url: &str) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a>;
-    fn fetch_container(&self, url: &str, start: usize, max: usize) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a>;
+    fn fetch(&self, url: &str) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a>;
+    fn fetch_container(
+        &self,
+        url: &str,
+        start: usize,
+        max: usize,
+    ) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a>;
 
     fn section_type() -> SectionType;
     fn connection(&self) -> &Connection;
     fn key(&self) -> String;
 }
 
-
-//fn looper<'a, T: LibrarySection + 'static>((lib, elements):
-//                                               (T, Vec<T::Content>)) -> Box<Future<Item=Loop<Vec<T::Content>, (Box<T>, Vec<T::Content>)>, Error=T::Error>> {
+//fn looper<'a, T: LibrarySection + 'static>((lib, elements):(T, Vec<T::Content>))
+//-> Box<Future<Item=Loop<Vec<T::Content>, (Box<T>, Vec<T::Content>)>, Error=T::Error>> {
 //    Box::new(lib.fetch_container("", elements.len(), 200usize).and_then(|items| {
 //        Ok(Loop::Break(elements))
 //    }))
 //}
-
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -188,7 +233,7 @@ impl SectionType {
             "photo" => Some(SectionType::Photo),
             "artist" => Some(SectionType::Music),
             "show" => Some(SectionType::Show),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -205,24 +250,27 @@ pub struct Section {
     pub key: String,
     #[serde(rename = "type")]
     pub type_: String,
-    pub  title: String,
-    pub  agent: String,
-    pub  scanner: String,
-    pub  language: String,
-    pub  uuid: String,
-    pub  updated_at: String,
-    pub  created_at: String,
+    pub title: String,
+    pub agent: String,
+    pub scanner: String,
+    pub language: String,
+    pub uuid: String,
+    pub updated_at: String,
+    pub created_at: String,
     #[serde(rename = "Location")]
     pub location: Location,
 }
 
-
 impl Section {
     pub const PATH: &'static str = "/library/sections/";
 
-    pub fn path(&self) -> String { format!("{}{}/", Section::PATH, self.key) }
+    pub fn path(&self) -> String {
+        format!("{}{}/", Section::PATH, self.key)
+    }
 
-    pub fn section_type(&self) -> Option<SectionType> { SectionType::from_str(self.type_.as_str()) }
+    pub fn section_type(&self) -> Option<SectionType> {
+        SectionType::from_str(self.type_.as_str())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -230,7 +278,6 @@ pub struct Location {
     id: String,
     path: String,
 }
-
 
 macro_rules! plex_lib_section {
     ($s:tt) => {
@@ -249,7 +296,7 @@ macro_rules! plex_lib_section {
 
 #[derive(Debug, Clone)]
 pub struct MovieSection<'a> {
-    inner: PlexLibSection<'a>
+    inner: PlexLibSection<'a>,
 }
 plex_lib_section!(MovieSection);
 
@@ -258,34 +305,50 @@ impl<'a> LibrarySection<'a> for MovieSection<'a> {
     type Error = APIError;
     type Filter = MovieLibraryFilter;
 
-    fn fetch(&self, url: &str) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a> {
-        Box::new(self.client()
-            .get_xml::<VideoContainer>(url)
-            .map(move |container| container.videos))
+    fn fetch(&self, url: &str) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a> {
+        Box::new(
+            self.client()
+                .get_xml::<VideoContainer>(url)
+                .map(move |container| container.videos),
+        )
     }
 
-    fn fetch_container(&self, url: &str, start: usize, max: usize) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a> {
-        Box::new(self.client()
-            .get_xml_container::<VideoContainer>(url, start, max)
-            .map(move |container| container.videos))
+    fn fetch_container(
+        &self,
+        url: &str,
+        start: usize,
+        max: usize,
+    ) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a> {
+        Box::new(
+            self.client()
+                .get_xml_container::<VideoContainer>(url, start, max)
+                .map(move |container| container.videos),
+        )
     }
 
-    fn connection(&self) -> &Connection { &self.inner.conn }
+    fn connection(&self) -> &Connection {
+        &self.inner.conn
+    }
 
-    fn key(&self) -> String { self.inner.inner.key.clone() }
+    fn key(&self) -> String {
+        self.inner.inner.key.clone()
+    }
 
-    fn section_type() -> SectionType { SectionType::Movie }
+    fn section_type() -> SectionType {
+        SectionType::Movie
+    }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct MusicSection<'a> {
-    inner: PlexLibSection<'a>
+    inner: PlexLibSection<'a>,
 }
 plex_lib_section!(MusicSection);
 
 impl<'a> MusicSection<'a> {
-        pub fn albums(&self) -> impl Future<Item=Vec<PlexAlbum<'a>>, Error=APIError> { self.all() }
+    pub fn albums(&self) -> impl Future<Item = Vec<PlexAlbum<'a>>, Error = APIError> {
+        self.all()
+    }
 }
 
 impl<'a> LibrarySection<'a> for MusicSection<'a> {
@@ -293,39 +356,58 @@ impl<'a> LibrarySection<'a> for MusicSection<'a> {
     type Error = APIError;
     type Filter = MusicLibraryFilter;
 
-    fn all(&self) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a> {
-        let url = format!("{}{}/{}/albums", self.connection().endpoint(), PlexLibrary::SECTIONS, self.key());
+    fn all(&self) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a> {
+        let url = format!(
+            "{}{}/{}/albums",
+            self.connection().endpoint(),
+            PlexLibrary::SECTIONS,
+            self.key()
+        );
         self.fetch(url.as_str())
     }
 
-    fn fetch(&self, url: &str) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a> {
+    fn fetch(&self, url: &str) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a> {
         let client = Rc::clone(&self.inner.client);
         let conn = self.connection().clone();
-        Box::new(client
-            .get_xml::<AlbumContainer>(url)
-            .map(move |container|
-                container.albums
-                    .into_iter()
-                    .map(|album| PlexAlbum::new(album, conn.clone(), Rc::clone(&client)))
-                    .collect::<Vec<_>>()))
+        Box::new(client.get_xml::<AlbumContainer>(url).map(move |container| {
+            container
+                .albums
+                .into_iter()
+                .map(|album| PlexAlbum::new(album, conn.clone(), Rc::clone(&client)))
+                .collect::<Vec<_>>()
+        }))
     }
 
-    fn fetch_container(&self, url: &str, start: usize, max: usize) -> Box<Future<Item=Vec<Self::Content>, Error=Self::Error> + 'a> {
+    fn fetch_container(
+        &self,
+        url: &str,
+        start: usize,
+        max: usize,
+    ) -> Box<Future<Item = Vec<Self::Content>, Error = Self::Error> + 'a> {
         let client = Rc::clone(&self.inner.client);
         let conn = self.connection().clone();
-        Box::new(client
-            .get_xml_container::<AlbumContainer>(url, start, max)
-            .map(move |container|
-                container.albums
-                    .into_iter()
-                    .map(|album| PlexAlbum::new(album, conn.clone(), Rc::clone(&client)))
-                    .collect::<Vec<_>>()))
+        Box::new(
+            client
+                .get_xml_container::<AlbumContainer>(url, start, max)
+                .map(move |container| {
+                    container
+                        .albums
+                        .into_iter()
+                        .map(|album| PlexAlbum::new(album, conn.clone(), Rc::clone(&client)))
+                        .collect::<Vec<_>>()
+                }),
+        )
     }
 
-    fn connection(&self) -> &Connection { &self.inner.conn }
+    fn connection(&self) -> &Connection {
+        &self.inner.conn
+    }
 
-    fn key(&self) -> String { self.inner.inner.key.clone() }
+    fn key(&self) -> String {
+        self.inner.inner.key.clone()
+    }
 
-    fn section_type() -> SectionType { SectionType::Music }
+    fn section_type() -> SectionType {
+        SectionType::Music
+    }
 }
-

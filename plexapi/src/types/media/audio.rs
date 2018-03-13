@@ -6,7 +6,6 @@ use errors::APIError;
 
 pub trait Audio {}
 
-
 pub struct PlexAlbum<'a> {
     pub inner: Album,
     conn: Connection,
@@ -14,15 +13,20 @@ pub struct PlexAlbum<'a> {
 }
 
 impl<'a> PlexAlbum<'a> {
-    pub fn new(inner: Album, conn: Connection, client: Rc<PlexClient<'a>>) -> Self { PlexAlbum { inner, conn, client } }
-
-    pub fn tracks(&self) -> impl Future<Item=Vec<Track>, Error=APIError> {
-        let url = format!("{}/{}/children", self.conn.endpoint(), self.inner.key);
-        self.client.get_xml::<TrackContainer>(url.as_str())
-            .map(move |container| container.tracks)
+    pub fn new(inner: Album, conn: Connection, client: Rc<PlexClient<'a>>) -> Self {
+        PlexAlbum {
+            inner,
+            conn,
+            client,
+        }
     }
 
-
+    pub fn tracks(&self) -> impl Future<Item = Vec<Track>, Error = APIError> {
+        let url = format!("{}/{}/children", self.conn.endpoint(), self.inner.key);
+        self.client
+            .get_xml::<TrackContainer>(url.as_str())
+            .map(move |container| container.tracks)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
@@ -184,7 +188,6 @@ leafCount="6" addedAt="1514064996" updatedAt="234123412">
         let server: Result<AlbumContainer, Error> = deserialize(xml.as_bytes());
         assert!(server.is_ok());
     }
-
 
     #[test]
     fn track_container_deserialize() {

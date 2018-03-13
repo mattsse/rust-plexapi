@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
-fn encode(v: &Vec<String>) -> Cow<[u8]> { Cow::Owned(v.join(",").into_bytes()) }
+fn encode(v: &Vec<String>) -> Cow<[u8]> {
+    Cow::Owned(v.join(",").into_bytes())
+}
 
 pub trait LibraryFilter {
     fn format(&self) -> String;
@@ -30,8 +32,20 @@ impl LibraryFilter for MovieLibraryFilter {
         match *self {
             MovieLibraryFilter::Unwachted(v) => format!("unwatched={}", v),
             MovieLibraryFilter::Duplicate(v) => format!("duplicate={}", v),
-            MovieLibraryFilter::Year(ref v) => format!("year={}", v.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(",")),
-            MovieLibraryFilter::Decade(ref v) => format!("decade={}", v.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(",")),
+            MovieLibraryFilter::Year(ref v) => format!(
+                "year={}",
+                v.iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+            MovieLibraryFilter::Decade(ref v) => format!(
+                "decade={}",
+                v.iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
             MovieLibraryFilter::Genre(ref v) => format!("genre={:?}", encode(v)),
             MovieLibraryFilter::Collection(ref v) => format!("collection={:?}", encode(v)),
             MovieLibraryFilter::Director(ref v) => format!("director={:?}", encode(v)),
@@ -41,7 +55,7 @@ impl LibraryFilter for MovieLibraryFilter {
             MovieLibraryFilter::Resolution(ref v) => format!("resolution={}", v),
             MovieLibraryFilter::Guid(ref v) => format!("guid={}", v),
             MovieLibraryFilter::Label(ref v) => format!("label={}", v),
-            MovieLibraryFilter::ContentRating(v) => format!("contentRating={}", v)
+            MovieLibraryFilter::ContentRating(v) => format!("contentRating={}", v),
         }
     }
 }
@@ -62,7 +76,7 @@ impl LibraryFilter for MusicLibraryFilter {
             MusicLibraryFilter::Genre(ref v) => format!("genre={:?}", encode(v)),
             MusicLibraryFilter::Country(ref v) => format!("country={}", v),
             MusicLibraryFilter::Collection(ref v) => format!("collection={:?}", encode(v)),
-            MusicLibraryFilter::Mood(ref v) => format!("mood={}", v)
+            MusicLibraryFilter::Mood(ref v) => format!("mood={}", v),
         }
     }
 }

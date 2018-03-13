@@ -1,5 +1,5 @@
 use client::PlexClient;
-use types::library::{PlexLibrary, Library};
+use types::library::{Library, PlexLibrary};
 use futures::Future;
 use errors::APIError;
 use types::device::Connection;
@@ -15,14 +15,20 @@ pub struct PlexServer<'a> {
 
 impl<'a> PlexServer<'a> {
     pub fn new(inner: Server, client: Rc<PlexClient<'a>>, conn: Connection) -> Self {
-        PlexServer { inner, client, conn }
+        PlexServer {
+            inner,
+            client,
+            conn,
+        }
     }
 
-    pub fn library(&self) -> impl Future<Item=PlexLibrary<'a>, Error=APIError> {
+    pub fn library(&self) -> impl Future<Item = PlexLibrary<'a>, Error = APIError> {
         let client = Rc::clone(&self.client);
         let url = self.conn.format_url(PlexLibrary::PATH, self.client.token());
         let conn = self.conn.clone();
-        client.get_xml::<Library>(url.as_str()).map(move |library| PlexLibrary::new(library, client, conn))
+        client
+            .get_xml::<Library>(url.as_str())
+            .map(move |library| PlexLibrary::new(library, client, conn))
     }
 }
 
@@ -81,7 +87,6 @@ pub struct Server {
     pub directories: Vec<Directory>,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Directory {
@@ -89,7 +94,6 @@ pub struct Directory {
     key: String,
     title: String,
 }
-
 
 #[cfg(test)]
 mod tests {

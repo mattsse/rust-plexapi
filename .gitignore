@@ -4,4 +4,4 @@
 .env
 .idea/
 rust-plexapi.iml
-bin
+bin*.DS_Store

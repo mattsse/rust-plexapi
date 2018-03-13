@@ -35,16 +35,9 @@ header! { (XPlexContainerStart, "X-Plex-Container-Start") => [String] }
 header! { (XPlexToken, "X-Plex-Token") => [String] }
 
 pub mod headers {
-    pub use super::{XPlexPlatform,
-                    XPlexPlatformVersion,
-                    XPlexProvides,
-                    XPlexClientIdentifier,
-                    XPlexProduct,
-                    XPlexVersion,
-                    XPlexDevice,
-                    XPlexContainerSize,
-                    XPlexContainerStart,
-                    XPlexToken};
+    pub use super::{XPlexClientIdentifier, XPlexContainerSize, XPlexContainerStart, XPlexDevice,
+                    XPlexPlatform, XPlexPlatformVersion, XPlexProduct, XPlexProvides, XPlexToken,
+                    XPlexVersion};
 }
 
 pub fn set_basic_plex_headers(headers: &mut Headers) {
@@ -65,9 +58,7 @@ pub fn basic_plex_headers() -> Headers {
     headers
 }
 
-
 pub mod request;
-
 
 /// Some basic plex routes
 pub mod routes {
@@ -76,13 +67,15 @@ pub mod routes {
 
     pub const FRIENDINVITE: &'static str = "https://plex.tv/api/servers/{machineId}/shared_servers";
     // post with data
-    pub const FRIENDSERVERS: &'static str = "https://plex.tv/api/servers/{machineId}/shared_servers/{serverId}";
+    pub const FRIENDSERVERS: &'static str =
+        "https://plex.tv/api/servers/{machineId}/shared_servers/{serverId}";
     // put with data
     pub const PLEXSERVERS: &'static str = "https://plex.tv/api/servers/{machineId}";
     // get
     pub const FRIENDUPDATE: &'static str = "https://plex.tv/api/friends/{userId}";
     // put with args, delete
-    pub const REMOVEINVITE: &'static str = "https://plex.tv/api/invites/requested/{userId}?friend=0&server=1&home=0";
+    pub const REMOVEINVITE: &'static str =
+        "https://plex.tv/api/invites/requested/{userId}?friend=0&server=1&home=0";
     // delete
     pub const REQUESTED: &'static str = "https://plex.tv/api/invites/requested";
     // get

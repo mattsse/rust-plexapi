@@ -1,8 +1,8 @@
 use client::PlexClient;
-use futures::{Future, future};
+use futures::{future, Future};
 use errors::APIError;
 use serde_xml_rs::Error;
-use types::server::{Server, PlexServer};
+use types::server::{PlexServer, Server};
 use types::PlexToken;
 use std::rc::Rc;
 use std::net::SocketAddr;
@@ -13,41 +13,45 @@ pub struct PlexDevice<'a> {
     client: Rc<PlexClient<'a>>,
 }
 
-
 impl<'a> PlexDevice<'a> {
     pub fn new(inner: Device, client: Rc<PlexClient<'a>>) -> Self {
-        PlexDevice {
-            inner,
-            client,
-        }
+        PlexDevice { inner, client }
     }
 
     /// Connects to the device's connection, prefers local connections
-    pub fn connect(&self) -> impl Future<Item=PlexServer<'a>, Error=APIError> {
+    pub fn connect(&self) -> impl Future<Item = PlexServer<'a>, Error = APIError> {
         let con = match self.inner.connections.len() {
             0 => None,
             1 => self.inner.connections.first(),
             _ => match self.inner.connections.iter().find(|p| p.is_local()) {
                 Some(c) => Some(c),
-                _ => self.inner.connections.first()
-            }
+                _ => self.inner.connections.first(),
+            },
         };
 
         // boxing necessary to unify return type...
-        let res: Box<Future<Item=PlexServer, Error=APIError>> = match con {
+        let res: Box<Future<Item = PlexServer, Error = APIError>> = match con {
             Some(c) => {
                 let client = Rc::clone(&self.client);
                 let conn = c.clone();
-                Box::new(client.get_xml::<Server>(c.endpoint().as_str())
-                    .map(move |server| PlexServer::new(server.clone(), Rc::clone(&client), conn)))
+                Box::new(
+                    client
+                        .get_xml::<Server>(c.endpoint().as_str())
+                        .map(move |server| {
+                            PlexServer::new(server.clone(), Rc::clone(&client), conn)
+                        }),
+                )
             }
-            _ => Box::new(future::err(APIError::from(Error::Custom("No Connection Present for this Device".to_string()))))
+            _ => Box::new(future::err(APIError::from(Error::Custom(
+                "No Connection Present for this Device".to_string(),
+            )))),
         };
         res
     }
 }
 
-//pub fn select_device<'a, F: Future<Item=Vec<PlexDevice<'a>>, Error=APIError>>(f: F, name: &'a str) -> impl Future<Item=PlexDevice<'a>, Error=APIError> {
+//pub fn select_device<'a, F: Future<Item=Vec<PlexDevice<'a>>, Error=APIError>>(f: F, name: &'a str)
+// -> impl Future<Item=PlexDevice<'a>, Error=APIError> {
 //    f.and_then(move |dev| {
 //        match dev.into_iter().find(|p| p.inner.name.eq(name)) {
 //            Some(d) => future::ok(d),
@@ -56,7 +60,8 @@ impl<'a> PlexDevice<'a> {
 //    })
 //}
 //
-//pub fn select_device_type<'a, F: Future<Item=Vec<PlexDevice<'a>>>>(f: F, device_type: PlexDeviceType) -> impl Future<Item=Vec<PlexDevice<'a>>, Error=F::Error> {
+//pub fn select_device_type<'a, F: Future<Item=Vec<PlexDevice<'a>>>>(f: F, device_type: PlexDeviceType)
+//-> impl Future<Item=Vec<PlexDevice<'a>>, Error=F::Error> {
 //    f.map(move |dev| {
 //        let type_name = device_type.as_str();
 //        dev.into_iter()
@@ -133,35 +138,42 @@ impl Connection {
     pub fn is_local(&self) -> bool {
         match self.local {
             Some(ref s) => "1".eq(s),
-            _ => false
+            _ => false,
         }
     }
 
     pub fn protocol(&self) -> Option<ConnectionProtocol> {
         match self.protocol {
             Some(ref s) => ConnectionProtocol::from_str(s),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn endpoint(&self) -> String {
         match self.address {
             // TODO format with protocol
-            Some(ref s) => format!("{}://{}:{}",
-                                   self.protocol().unwrap_or(ConnectionProtocol::Http).as_str(),
-                                   s,
-                                   self.port.as_ref().unwrap()),
-            _ => self.uri.clone()
+            Some(ref s) => format!(
+                "{}://{}:{}",
+                self.protocol().unwrap_or(ConnectionProtocol::Http).as_str(),
+                s,
+                self.port.as_ref().unwrap()
+            ),
+            _ => self.uri.clone(),
         }
     }
 
     pub fn format_url(&self, param: &str, token: PlexToken) -> String {
         let delim = match param.contains("?") {
             true => "&",
-            _ => "?"
+            _ => "?",
         };
-        format!("{}{}{}X-Plex-Token={}",
-                self.endpoint(), param, delim, token)
+        format!(
+            "{}{}{}X-Plex-Token={}",
+            self.endpoint(),
+            param,
+            delim,
+            token
+        )
     }
 
     pub fn from_endoint(socket: SocketAddr) -> Connection {
@@ -170,7 +182,6 @@ impl Connection {
         Connection::new(address.as_str(), port.as_str())
     }
 }
-
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ConnectionProtocol {
@@ -182,14 +193,14 @@ impl ConnectionProtocol {
     pub fn as_str(&self) -> &'static str {
         match *self {
             ConnectionProtocol::Https => "https",
-            ConnectionProtocol::Http => "http"
+            ConnectionProtocol::Http => "http",
         }
     }
     pub fn from_str(s: &str) -> Option<ConnectionProtocol> {
         match s {
             "https" => Some(ConnectionProtocol::Https),
             "http" => Some(ConnectionProtocol::Http),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -210,7 +221,7 @@ impl PlexDeviceType {
             PlexDeviceType::PlexWeb => "Plex Web",
             PlexDeviceType::PlexMediaPlayer => "Plex Media Player",
             PlexDeviceType::PlexForiOS => "Plex for iOS",
-            PlexDeviceType::PlexForAndroid => "Plex for Android"
+            PlexDeviceType::PlexForAndroid => "Plex for Android",
         }
     }
 }

@@ -1,12 +1,12 @@
-use hyper::client::{Client, HttpConnector, FutureResponse, Request};
-use hyper::{Body, Uri, Method, Headers};
+use hyper::client::{Client, FutureResponse, HttpConnector, Request};
+use hyper::{Body, Headers, Method, Uri};
 use hyper_tls::HttpsConnector;
-use futures::{Future, Stream, future};
+use futures::{future, Future, Stream};
 use serde::Deserialize;
 use serde_xml_rs::deserialize;
 use std::str::FromStr;
 use types::{PlexToken, PlexTokenProvider};
-use types::device::{DeviceContainer, PlexDevice, PlexDeviceType, Connection};
+use types::device::{Connection, DeviceContainer, PlexDevice, PlexDeviceType};
 use types::server::{PlexServer, Server};
 use http::headers::*;
 use errors::APIError;
@@ -15,7 +15,6 @@ use http::routes::DEVICES;
 use std::rc::Rc;
 use regex::Regex;
 use std::net::SocketAddr;
-
 
 #[macro_export]
 macro_rules! plex_client_wrapper {
@@ -38,7 +37,6 @@ macro_rules! plex_client_wrapper {
     };
 }
 
-
 #[derive(Debug, Clone)]
 pub struct PlexClient<'a> {
     pub client: &'a Client<HttpsConnector<HttpConnector>, Body>,
@@ -59,51 +57,71 @@ impl<'a> PlexClient<'a> {
     pub fn new(client: &'a Client<HttpsConnector<HttpConnector>, Body>, token: PlexToken) -> Self {
         let mut headers = basic_plex_headers();
         headers.set(XPlexToken(token.clone()));
-        PlexClient { client, headers, token }
+        PlexClient {
+            client,
+            headers,
+            token,
+        }
     }
 
-    pub fn get_xml<'de, T: Deserialize<'de>>(&self, dest: &str) -> impl Future<Item=T, Error=APIError> {
+    pub fn get_xml<'de, T: Deserialize<'de>>(
+        &self,
+        dest: &str,
+    ) -> impl Future<Item = T, Error = APIError> {
         let url = Uri::from_str(dest).unwrap();
         let mut request = Request::new(Method::Get, url);
         request.headers_mut().extend(self.headers.iter());
         self.submit_request(request)
     }
 
-    pub fn get_xml_container<'de, T: Deserialize<'de>>(&self, dest: &str, start: usize, max: usize) -> impl Future<Item=T, Error=APIError> {
+    pub fn get_xml_container<'de, T: Deserialize<'de>>(
+        &self,
+        dest: &str,
+        start: usize,
+        max: usize,
+    ) -> impl Future<Item = T, Error = APIError> {
         let url = Uri::from_str(dest).unwrap();
         let mut request = Request::new(Method::Get, url);
         request.headers_mut().extend(self.headers.iter());
-        request.headers_mut().set(XPlexContainerStart(start.to_string()));
-        request.headers_mut().set(XPlexContainerSize(max.to_string()));
+        request
+            .headers_mut()
+            .set(XPlexContainerStart(start.to_string()));
+        request
+            .headers_mut()
+            .set(XPlexContainerSize(max.to_string()));
         Self::from_xml_response(self.client.request(request))
     }
 
-
-    fn submit_request<'de, T: Deserialize<'de>>(&self, request: Request) -> impl Future<Item=T, Error=APIError> {
+    fn submit_request<'de, T: Deserialize<'de>>(
+        &self,
+        request: Request,
+    ) -> impl Future<Item = T, Error = APIError> {
         Self::from_xml_response(self.client.request(request))
     }
 
-
-    pub fn from_xml_response<'de, T: Deserialize<'de>>(fut_response: FutureResponse) -> impl Future<Item=T, Error=APIError> {
-        fut_response.map_err(|_| ()).and_then(|res| {
-            let body =
-                res.body()
+    pub fn from_xml_response<'de, T: Deserialize<'de>>(
+        fut_response: FutureResponse,
+    ) -> impl Future<Item = T, Error = APIError> {
+        fut_response
+            .map_err(|_| ())
+            .and_then(|res| {
+                let body = res.body()
                     .map_err(|_| ())
                     .fold(vec![], |mut acc, chunk| {
                         acc.extend_from_slice(&chunk);
                         Ok(acc)
-                    }).and_then(|v| String::from_utf8(v).map_err(|_| ()))
+                    })
+                    .and_then(|v| String::from_utf8(v).map_err(|_| ()))
                     .and_then(|s| {
                         // escaped the & char which may break deserialization
                         let escaped = s.replace("&", "&amp;");
-//                        println!("{}", escaped);
+                        //                        println!("{}", escaped);
                         deserialize::<_, T>(escaped.as_bytes()).map_err(|_| ())
-                    }
-                    );
-            body
-        }).map_err(|_| APIError::ReadError)
+                    });
+                body
+            })
+            .map_err(|_| APIError::ReadError)
     }
-
 
     pub fn escape_xml(s: &mut String) {
         lazy_static! {
@@ -117,40 +135,48 @@ impl<'a> PlexClient<'a> {
         }
     }
 
-
     /// for dev purposes to get the response as string
-    pub fn text_response(&self, dest: &str) -> impl Future<Item=String, Error=APIError> {
+    pub fn text_response(&self, dest: &str) -> impl Future<Item = String, Error = APIError> {
         let url = Uri::from_str(dest).unwrap();
         let mut request = Request::new(Method::Get, url);
         request.headers_mut().extend(self.headers.iter());
 
-        self.client.request(request).map_err(|_| ()).and_then(|res| {
-            let body = res.body().map_err(|_| ()).fold(vec![], |mut acc, chunk| {
-                acc.extend_from_slice(&chunk);
-                Ok(acc)
-            }).and_then(|v| String::from_utf8(v).map_err(|_| ()));
+        self.client
+            .request(request)
+            .map_err(|_| ())
+            .and_then(|res| {
+                let body = res.body()
+                    .map_err(|_| ())
+                    .fold(vec![], |mut acc, chunk| {
+                        acc.extend_from_slice(&chunk);
+                        Ok(acc)
+                    })
+                    .and_then(|v| String::from_utf8(v).map_err(|_| ()));
 
-            body
-        }).map_err(|_| APIError::ReadError)
+                body
+            })
+            .map_err(|_| APIError::ReadError)
     }
 
     #[inline]
-    pub fn headers_mut(&mut self) -> &mut Headers { &mut self.headers }
+    pub fn headers_mut(&mut self) -> &mut Headers {
+        &mut self.headers
+    }
 }
-
 
 pub trait PlexClientProvider<'a> {
     fn client(&self) -> &Rc<PlexClient<'a>>;
 }
 
-
 impl<'a> PlexTokenProvider for PlexClient<'a> {
-    fn token(&self) -> PlexToken { self.token.clone() }
+    fn token(&self) -> PlexToken {
+        self.token.clone()
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Plex<'a> {
-    client: Rc<PlexClient<'a>>
+    client: Rc<PlexClient<'a>>,
 }
 
 impl<'a> Plex<'a> {
@@ -159,23 +185,32 @@ impl<'a> Plex<'a> {
         Plex { client }
     }
 
-    pub fn devices(&self) -> impl Future<Item=Vec<PlexDevice<'a>>, Error=APIError> {
+    pub fn devices(&self) -> impl Future<Item = Vec<PlexDevice<'a>>, Error = APIError> {
         let client = Rc::clone(&self.client);
-        client.get_xml::<DeviceContainer>(DEVICES).map(move |d|
-            d.devices.into_iter().map(|m| PlexDevice::new(m, Rc::clone(&client))).collect::<Vec<_>>()
-        )
-    }
-
-    pub fn select_device(&self, name: &'a str) -> impl Future<Item=PlexDevice<'a>, Error=APIError> {
-        self.devices().and_then(move |dev| {
-            match dev.into_iter().find(|p| p.inner.name.eq(name)) {
-                Some(d) => future::ok(d),
-                _ => future::err(APIError::ReadError)
-            }
+        client.get_xml::<DeviceContainer>(DEVICES).map(move |d| {
+            d.devices
+                .into_iter()
+                .map(|m| PlexDevice::new(m, Rc::clone(&client)))
+                .collect::<Vec<_>>()
         })
     }
 
-    pub fn select_device_type(&self, device_type: PlexDeviceType) -> impl Future<Item=Vec<PlexDevice<'a>>, Error=APIError> {
+    pub fn select_device(
+        &self,
+        name: &'a str,
+    ) -> impl Future<Item = PlexDevice<'a>, Error = APIError> {
+        self.devices().and_then(
+            move |dev| match dev.into_iter().find(|p| p.inner.name.eq(name)) {
+                Some(d) => future::ok(d),
+                _ => future::err(APIError::ReadError),
+            },
+        )
+    }
+
+    pub fn select_device_type(
+        &self,
+        device_type: PlexDeviceType,
+    ) -> impl Future<Item = Vec<PlexDevice<'a>>, Error = APIError> {
         self.devices().map(move |dev| {
             let type_name = device_type.as_str();
             dev.into_iter()
@@ -184,19 +219,27 @@ impl<'a> Plex<'a> {
         })
     }
 
-    pub fn connect(&self, server_url: &str) -> impl Future<Item=PlexServer<'a>, Error=APIError> {
+    pub fn connect(
+        &self,
+        server_url: &str,
+    ) -> impl Future<Item = PlexServer<'a>, Error = APIError> {
         match server_url.parse::<SocketAddr>() {
             Ok(socket) => {
                 let client = Rc::clone(&self.client);
                 let conn = Connection::from_endoint(socket);
                 println!("{:?}", conn);
-                Box::new(client.get_xml::<Server>(conn.endpoint().as_str())
-                    .map(move |server| PlexServer::new(server.clone(), Rc::clone(&client), conn)))
+                Box::new(
+                    client
+                        .get_xml::<Server>(conn.endpoint().as_str())
+                        .map(move |server| {
+                            PlexServer::new(server.clone(), Rc::clone(&client), conn)
+                        }),
+                )
             }
-            _ => {
-                Box::new(future::err(APIError::ParseError(format!("Could not parse the server url: {}", server_url))))
-                    as Box<Future<Item=PlexServer, Error=APIError>>
-            }
+            _ => Box::new(future::err(APIError::ParseError(format!(
+                "Could not parse the server url: {}",
+                server_url
+            )))) as Box<Future<Item = PlexServer, Error = APIError>>,
         }
     }
 }

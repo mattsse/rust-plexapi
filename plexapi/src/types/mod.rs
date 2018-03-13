@@ -26,13 +26,11 @@ impl<'a> PlexHeaders for PlexToken {
     }
 }
 
-
 impl<'a> Into<XPlexToken> for &'a PlexToken {
     fn into(self) -> XPlexToken {
         XPlexToken(self.clone())
     }
 }
-
 
 pub mod account;
 pub mod device;

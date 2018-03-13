@@ -61,7 +61,6 @@ pub struct Part {
     video_profile: String,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VideoContainer {
@@ -141,4 +140,3 @@ optimizedForStreaming="0" videoProfile="high"/>
         assert!(server.is_ok());
     }
 }
-

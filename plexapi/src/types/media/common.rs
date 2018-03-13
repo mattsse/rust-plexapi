@@ -1,37 +1,37 @@
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(default)]
 pub struct Genre {
-    pub tag: String
+    pub tag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(default)]
 pub struct Writer {
-    pub tag: String
+    pub tag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(default)]
 pub struct Director {
-    pub tag: String
+    pub tag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(default)]
 pub struct Country {
-    pub tag: String
+    pub tag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(default)]
 pub struct Role {
-    pub tag: String
+    pub tag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 #[serde(default)]
 pub struct Actor {
-    pub tag: String
+    pub tag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
@@ -41,4 +41,3 @@ pub struct Similar {
     pub filter: String,
     pub tag: String,
 }
-

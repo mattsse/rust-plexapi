@@ -1,4 +1,4 @@
-use hyper::{Body, Client, Request, Method, Uri};
+use hyper::{Body, Client, Method, Request, Uri};
 use hyper::client::HttpConnector;
 use hyper::header::{Authorization, Basic};
 use hyper_tls::HttpsConnector;
@@ -14,7 +14,7 @@ use types::PlexToken;
 #[derive(Debug, PartialEq, Clone)]
 pub struct Login {
     pub username: String,
-    pub password: String
+    pub password: String,
 }
 
 impl Login {
@@ -24,7 +24,10 @@ impl Login {
             password: password.to_owned(),
         }
     }
-    pub fn get_token<'a>(&self, client: &'a Client<HttpsConnector<HttpConnector>, Body>) -> impl Future<Item=PlexToken, Error=APIError> {
+    pub fn get_token<'a>(
+        &self,
+        client: &'a Client<HttpsConnector<HttpConnector>, Body>,
+    ) -> impl Future<Item = PlexToken, Error = APIError> {
         let url = Uri::from_str(SIGNIN).unwrap();
         let mut request = Request::new(Method::Post, url);
         set_basic_plex_headers(request.headers_mut());
@@ -35,17 +38,14 @@ impl Login {
     }
 }
 
-impl <'a> Into<Authorization<Basic>> for &'a Login {
+impl<'a> Into<Authorization<Basic>> for &'a Login {
     fn into(self) -> Authorization<Basic> {
-        Authorization(
-            Basic {
-                username: self.username.clone(),
-                password: Some(self.password.clone())
-            }
-        )
+        Authorization(Basic {
+            username: self.username.clone(),
+            password: Some(self.password.clone()),
+        })
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct User {
@@ -93,8 +93,7 @@ pub struct User {
     pub subscription: Option<Subscription>,
     pub profile_settings: Option<ProfileSettings>,
     pub services: Vec<Services>,
-
-//    #[serde(skip_deserializing,skip_serializing)]
+    //    #[serde(skip_deserializing,skip_serializing)]
 //    _joined_at : Option<String>,
 
 //    #[serde(rename = "authentication-token",skip_deserializing,skip_serializing)]
@@ -110,12 +109,12 @@ pub struct Service {
     endpoint: String,
     token: Option<String>,
     status: Option<String>,
-    secret: Option<String>
+    secret: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Services {
-    service: Vec<Service>
+    service: Vec<Service>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -123,12 +122,12 @@ pub struct Subscription {
     active: String,
     status: String,
     plan: String,
-    feature: Vec<Feature>
+    feature: Vec<Feature>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Feature {
-    id: String
+    id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -136,15 +135,13 @@ pub struct ProfileSettings {
     default_audio_language: String,
     default_subtitle_language: String,
     auto_select_subtitle: String,
-    auto_select_audio: String
+    auto_select_audio: String,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_xml_rs::{deserialize, Error};
-
-
 
     #[test]
     fn user_deserialize() {
